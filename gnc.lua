@@ -6,42 +6,28 @@ local BASE_URL =
     "https://raw.githubusercontent.com/lebongenin/gens-nuclear-control/main/"
 
 local files = {
-    {
-        remote = "core/discovery.lua",
-        destination = "/core/discovery.lua"
-    },
-    {
-        remote = "core/logger.lua",
-        destination = "/core/logger.lua"
-    },
-    {
-        remote = "core/inspector.lua",
-        destination = "/core/inspector.lua"
-    },
-    {
-        remote = "api/fusion.lua",
-        destination = "/api/fusion.lua"
-    },
-    {
-        remote = "apps/test.lua",
-        destination = "/apps/test.lua"
-    },
-    {
-        remote = "apps/logger_test.lua",
-        destination = "/apps/logger_test.lua"
-    },
-    {
-        remote = "apps/fusion_test.lua",
-        destination = "/apps/fusion_test.lua"
-    },
-    {
-        remote = "apps/inspector.lua",
-        destination = "/apps/inspector.lua"
-    },
-    {
-        remote = "gnc.lua",
-        destination = "/gnc"
-    }
+
+    -- Core
+    "core/discovery.lua",
+    "core/logger.lua",
+    "core/inspector.lua",
+
+    -- API
+    "api/fusion.lua",
+
+    -- UI
+    "ui/colors.lua",
+    "ui/widgets.lua",
+
+    -- Apps
+    "apps/test.lua",
+    "apps/logger_test.lua",
+    "apps/fusion_test.lua",
+    "apps/inspector.lua",
+    "apps/fusion_dashboard.lua",
+
+    -- Main
+    "gnc.lua"
 }
 
 local function printHeader()
