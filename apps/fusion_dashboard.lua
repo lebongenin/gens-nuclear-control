@@ -1,6 +1,16 @@
 local ui = dofile("/ui/widgets.lua")
 local C  = dofile("/ui/colors.lua")
 
+local monitor = peripheral.find("monitor")
+
+if not monitor then
+    error("No monitor found")
+end
+
+term.redirect(monitor)
+
+monitor.setTextScale(0.5)
+
 while true do
 
     ui.clear()
