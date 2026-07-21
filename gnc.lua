@@ -1,9 +1,17 @@
+--================================================--
 -- GEN'S Nuclear Control
--- Installer and updater
+-- Installer / Updater
+-- Version : 0.1.0
+--================================================--
 
 local VERSION = "0.1.0"
+
 local BASE_URL =
-    "https://raw.githubusercontent.com/lebongenin/gens-nuclear-control/main/"
+"https://raw.githubusercontent.com/lebongenin/gens-nuclear-control/main/"
+
+--------------------------------------------------
+-- Files to download
+--------------------------------------------------
 
 local files = {
 
@@ -30,9 +38,15 @@ local files = {
     "gnc.lua"
 }
 
-local function printHeader()
+--------------------------------------------------
+-- Header
+--------------------------------------------------
+
+local function header()
+
     term.clear()
-    term.setCursorPos(1, 1)
+    term.setCursorPos(1,1)
+
     term.setTextColor(colors.cyan)
 
     print("================================")
@@ -40,117 +54,150 @@ local function printHeader()
     print("================================")
 
     term.setTextColor(colors.white)
-    print("Version " .. VERSION)
+
+    print("Version "..VERSION)
     print()
+
 end
 
-local function ensureParentDirectory(path)
-    local directory = fs.getDir(path)
+--------------------------------------------------
+-- Create directories
+--------------------------------------------------
 
-    if directory ~= "" and not fs.exists(directory) then
-        fs.makeDir(directory)
+local function createDirectory(path)
+
+    local dir = fs.getDir(path)
+
+    if dir ~= "" and not fs.exists(dir) then
+        fs.makeDir(dir)
     end
+
 end
 
-local function downloadFile(remotePath, destination)
-    local cacheBuster = tostring(os.epoch("utc"))
-    local url = BASE_URL .. remotePath .. "?v=" .. cacheBuster
-    local temporaryPath = destination .. ".tmp"
+--------------------------------------------------
+-- Download one file
+--------------------------------------------------
 
-    ensureParentDirectory(destination)
+local function download(remote, localPath)
 
-    if fs.exists(temporaryPath) then
-        fs.delete(temporaryPath)
-    end
+    local url = BASE_URL .. remote .. "?v=" .. tostring(os.epoch("utc"))
 
-    local response, errorMessage = http.get(url)
+    createDirectory(localPath)
+
+    local response = http.get(url)
 
     if not response then
-        return false, errorMessage or "HTTP connection failed"
+        return false, "HTTP request failed"
     end
 
-    local contents = response.readAll()
+    local data = response.readAll()
     response.close()
 
-    if not contents or contents == "" then
-        return false, "Downloaded file is empty"
+    if not data or data == "" then
+        return false, "Empty file"
     end
 
-    local file = fs.open(temporaryPath, "w")
+    local file = fs.open(localPath,"w")
 
     if not file then
-        return false, "Cannot create temporary file"
+        return false, "Cannot write file"
     end
 
-    file.write(contents)
+    file.write(data)
     file.close()
 
-    if fs.exists(destination) then
-        fs.delete(destination)
-    end
-
-    fs.move(temporaryPath, destination)
-
     return true
+
 end
 
+--------------------------------------------------
+-- Update
+--------------------------------------------------
+
 local function update()
-    printHeader()
+
+    header()
+
     print("Updating GNC...")
     print()
 
-    local successful = 0
-    local failed = 0
+    local okCount = 0
+    local failCount = 0
 
-    for _, entry in ipairs(files) do
-        write("Downloading " .. entry.remote .. "... ")
+    for _,file in ipairs(files) do
 
-        local ok, errorMessage =
-            downloadFile(entry.remote, entry.destination)
+        write("Downloading "..file.."... ")
+
+        local ok,err = download(file,file)
 
         if ok then
+
             term.setTextColor(colors.lime)
             print("OK")
-            successful = successful + 1
+
+            okCount = okCount + 1
+
         else
+
             term.setTextColor(colors.red)
             print("FAILED")
+
             term.setTextColor(colors.lightGray)
-            print("  " .. tostring(errorMessage))
-            failed = failed + 1
+            print("  "..err)
+
+            failCount = failCount + 1
+
         end
 
         term.setTextColor(colors.white)
+
     end
 
     print()
-    print("Updated: " .. successful)
-    print("Failed:  " .. failed)
+    print("Updated : "..okCount)
+    print("Failed  : "..failCount)
 
-    if failed == 0 then
+    print()
+
+    if failCount == 0 then
+
         term.setTextColor(colors.lime)
-        print()
         print("GNC is up to date!")
-        term.setTextColor(colors.white)
+
     else
+
         term.setTextColor(colors.orange)
-        print()
-        print("Update completed with errors.")
-        term.setTextColor(colors.white)
+        print("Update finished with errors.")
+
     end
+
+    term.setTextColor(colors.white)
+
 end
 
-local arguments = {...}
-local command = arguments[1]
+--------------------------------------------------
+-- Commands
+--------------------------------------------------
 
-if command == "update" or command == "install" then
+local args = {...}
+
+if args[1] == "update" or args[1] == "install" then
+
     update()
-elseif command == "version" then
-    print("GEN'S Nuclear Control " .. VERSION)
+
+elseif args[1] == "version" then
+
+    print("GEN'S Nuclear Control "..VERSION)
+
 else
-    printHeader()
-    print("Usage:")
-    print("  gnc update")
-    print("  gnc install")
-    print("  gnc version")
+
+    header()
+
+    print("Usage :")
+    print()
+
+    print("gnc update")
+    print("gnc install")
+    print("gnc version")
+
 end
