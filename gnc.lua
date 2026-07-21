@@ -1,7 +1,7 @@
 -- GEN'S Nuclear Control
 -- Installer and updater
 
-local VERSION = "0.0.1"
+local VERSION = "0.0.2"
 local BASE_URL =
     "https://raw.githubusercontent.com/lebongenin/gens-nuclear-control/main/"
 
