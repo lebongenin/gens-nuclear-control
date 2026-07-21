@@ -1,7 +1,7 @@
 -- GEN'S Nuclear Control
 -- Installer and updater
 
-local VERSION = "0.0.3"
+local VERSION = "0.0.4"
 local BASE_URL =
     "https://raw.githubusercontent.com/lebongenin/gens-nuclear-control/main/"
 
@@ -15,12 +15,20 @@ local files = {
         destination = "/core/logger.lua"
     },
     {
+        remote = "api/fusion.lua",
+        destination = "/api/fusion.lua"
+    },
+    {
         remote = "apps/test.lua",
         destination = "/apps/test.lua"
     },
     {
         remote = "apps/logger_test.lua",
         destination = "/apps/logger_test.lua"
+    },
+    {
+        remote = "apps/fusion_test.lua",
+        destination = "/apps/fusion_test.lua"
     },
     {
         remote = "gnc.lua",
