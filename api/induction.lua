@@ -6,6 +6,7 @@
 
 local discovery = dofile("/core/discovery.lua")
 local logger = dofile("/core/logger.lua")
+local energy = dofile("/core/energy.lua")
 
 local Induction = {}
 Induction.__index = Induction
@@ -106,31 +107,81 @@ end
 --------------------------------------------------
 
 function Induction:getEnergy()
-    return safeCall(
+    local value, errorMessage = safeCall(
         self.peripheral,
         "getEnergy"
     )
+
+    if value == nil then
+        return nil, errorMessage
+    end
+
+    return energy.joulesToFE(value)
 end
 
 function Induction:getMaxEnergy()
-    return safeCall(
+    local value, errorMessage = safeCall(
         self.peripheral,
         "getMaxEnergy"
     )
+
+    if value == nil then
+        return nil, errorMessage
+    end
+
+    return energy.joulesToFE(value)
 end
 
 function Induction:getEnergyNeeded()
-    return safeCall(
+    local value, errorMessage = safeCall(
         self.peripheral,
         "getEnergyNeeded"
     )
+
+    if value == nil then
+        return nil, errorMessage
+    end
+
+    return energy.joulesToFE(value)
 end
 
-function Induction:getFilledPercentage()
-    return safeCall(
+function Induction:getInput()
+    local value, errorMessage = safeCall(
         self.peripheral,
-        "getEnergyFilledPercentage"
+        "getLastInput"
     )
+
+    if value == nil then
+        return nil, errorMessage
+    end
+
+    return energy.joulesToFE(value)
+end
+
+function Induction:getOutput()
+    local value, errorMessage = safeCall(
+        self.peripheral,
+        "getLastOutput"
+    )
+
+    if value == nil then
+        return nil, errorMessage
+    end
+
+    return energy.joulesToFE(value)
+end
+
+function Induction:getTransferCapacity()
+    local value, errorMessage = safeCall(
+        self.peripheral,
+        "getTransferCap"
+    )
+
+    if value == nil then
+        return nil, errorMessage
+    end
+
+    return energy.joulesToFE(value)
 end
 
 --------------------------------------------------
