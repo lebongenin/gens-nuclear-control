@@ -196,36 +196,42 @@ end
 --------------------------------------------------
 
 function Induction:getInput()
-    return safeCall(
+    local value, errorMessage = safeCall(
         self.peripheral,
         "getLastInput"
     )
-	
-	   if value == nil then
+
+    if value == nil then
         return nil, errorMessage
     end
 
     return energy.joulesToFE(value)
-	
 end
 
 function Induction:getOutput()
-    return safeCall(
+    local value, errorMessage = safeCall(
         self.peripheral,
         "getLastOutput"
     )
-	
-	    if value == nil then
+
+    if value == nil then
         return nil, errorMessage
     end
-	
+
+    return energy.joulesToFE(value)
 end
 
 function Induction:getTransferCapacity()
-    return safeCall(
+    local value, errorMessage = safeCall(
         self.peripheral,
         "getTransferCap"
     )
+
+    if value == nil then
+        return nil, errorMessage
+    end
+
+    return energy.joulesToFE(value)
 end
 
 --------------------------------------------------
