@@ -1,12 +1,13 @@
 --================================================--
 -- GEN'S Nuclear Control
--- Version : 0.1.0
+-- Version : 0.2.0
 -- Application : Fusion Dashboard
 --================================================--
 
 local ui = dofile("/ui/widgets.lua")
 local C = dofile("/ui/colors.lua")
 local Fusion = dofile("/api/fusion.lua")
+local Induction = dofile("/api/induction.lua")
 local Energy = dofile("/core/energy.lua")
 
 --------------------------------------------------
@@ -27,6 +28,8 @@ term.redirect(monitor)
 --------------------------------------------------
 
 local reactor = Fusion.new()
+
+local matrix = Induction.new()
 
 --------------------------------------------------
 -- Formatting
@@ -90,11 +93,47 @@ end
 --------------------------------------------------
 
 while true do
+    --------------------------------------------------
+    -- Reconnection
+    --------------------------------------------------
+
     if not reactor:isConnected() then
         reactor:reconnect()
     end
 
-    local status = reactor:getStatus()
+    if not matrix:isConnected() then
+        matrix:reconnect()
+    end
+
+    --------------------------------------------------
+    -- Status
+    --------------------------------------------------
+
+    local reactorStatus = reactor:getStatus()
+    local matrixStatus = matrix:getStatus()
+
+    --------------------------------------------------
+    -- Colors
+    --------------------------------------------------
+
+    local balanceColor = C.text
+
+    if type(matrixStatus.netFlow) == "number" then
+        if matrixStatus.netFlow > 0 then
+            balanceColor = C.online
+        elseif matrixStatus.netFlow < 0 then
+            balanceColor = C.offline
+        end
+    end
+
+    local usageColor =
+        matrixStatus.connected
+        and C.info
+        or C.offline
+
+    --------------------------------------------------
+    -- Rendering
+    --------------------------------------------------
 
     ui.clear()
     ui.title("GEN'S Nuclear Control")
@@ -103,75 +142,159 @@ while true do
         3,
         6,
         "Fusion Reactor",
-        status.online == true
+        reactorStatus.online == true
     )
 
     ui.field(
         3,
         8,
         "Connection",
-        status.connected and "CONNECTED" or "LOST",
-        status.connected and C.online or C.offline
+        reactorStatus.connected
+            and "CONNECTED"
+            or "LOST",
+        reactorStatus.connected
+            and C.online
+            or C.offline
     )
 
     ui.field(
         3,
         10,
         "Reactor Formed",
-        status.formed and "YES" or "NO",
-        status.formed and C.online or C.offline
+        reactorStatus.formed
+            and "YES"
+            or "NO",
+        reactorStatus.formed
+            and C.online
+            or C.offline
     )
 
-	ui.field(
-    3,
-    12,
-    "Injection Rate",
-    formatRate(status.injectionRate)
-)
+    ui.field(
+        3,
+        12,
+        "Injection Rate",
+        formatRate(
+            reactorStatus.injectionRate
+        )
+    )
 
-	ui.field(
-    3,
-    14,
-    "Generation",
-    Energy.formatFEPerTick(status.production),
-    C.online
-)
+    ui.field(
+        3,
+        14,
+        "Generation",
+        Energy.formatFEPerTick(
+            reactorStatus.production
+        ),
+        C.online
+    )
 
-	ui.field(
-    3,
-    16,
-    "Case Temperature",
-    Energy.formatKelvin(status.caseTemperature)
-)
+    --------------------------------------------------
+    -- Energy network
+    --------------------------------------------------
 
-	ui.field(
-    3,
-    18,
-    "Plasma Temperature",
-    Energy.formatKelvin(status.plasmaTemperature)
-)
+    ui.field(
+        3,
+        16,
+        "Network Usage",
+        Energy.formatFEPerTick(
+            matrixStatus.output
+        ),
+        usageColor
+    )
 
-	ui.field(
-    3,
-    20,
-    "Logic Mode",
-    status.logicMode or "N/A",
-    C.warning
-)
+    ui.field(
+        3,
+        18,
+        "Matrix Input",
+        Energy.formatFEPerTick(
+            matrixStatus.input
+        )
+    )
 
-	ui.field(
-    3,
-    22,
-    "Environmental Loss",
-    Energy.formatFEPerTick(status.environmentalLoss)
-)
+    ui.field(
+        3,
+        20,
+        "Matrix Balance",
+        formatSignedEnergy(
+            matrixStatus.netFlow
+        ),
+        balanceColor
+    )
 
-	ui.field(
-    3,
-    24,
-    "Transfer Loss",
-    Energy.formatFEPerTick(status.transferLoss)
-)
+    ui.field(
+        3,
+        22,
+        "Stored Energy",
+        Energy.formatFE(
+            matrixStatus.energy
+        )
+    )
+
+    ui.field(
+        3,
+        24,
+        "Matrix Capacity",
+        Energy.formatFE(
+            matrixStatus.capacity
+        )
+    )
+
+    ui.field(
+        3,
+        26,
+        "Matrix Level",
+        Energy.formatPercentage(
+            matrixStatus.percentage
+        )
+    )
+
+    --------------------------------------------------
+    -- Reactor temperatures
+    --------------------------------------------------
+
+    ui.field(
+        3,
+        28,
+        "Case Temperature",
+        Energy.formatKelvin(
+            reactorStatus.caseTemperature
+        )
+    )
+
+    ui.field(
+        3,
+        30,
+        "Plasma Temperature",
+        Energy.formatKelvin(
+            reactorStatus.plasmaTemperature
+        )
+    )
+
+    ui.field(
+        3,
+        32,
+        "Logic Mode",
+        reactorStatus.logicMode or "N/A",
+        C.warning
+    )
+
+    ui.field(
+        3,
+        34,
+        "Environmental Loss",
+        Energy.formatFEPerTick(
+            reactorStatus.environmentalLoss
+        )
+    )
+
+    ui.field(
+        3,
+        36,
+        "Transfer Loss",
+        Energy.formatFEPerTick(
+            reactorStatus.transferLoss
+        )
+    )
 
     ui.footer(os.date("%H:%M:%S"))
 

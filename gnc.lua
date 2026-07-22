@@ -1,10 +1,10 @@
 --================================================--
 -- GEN'S Nuclear Control
 -- Installer / Updater
--- Version : 0.1.0
+-- Version : 0.2.0
 --================================================--
 
-local VERSION = "0.1.0"
+local VERSION = "0.2.0"
 
 local BASE_URL =
 "https://raw.githubusercontent.com/lebongenin/gens-nuclear-control/main/"

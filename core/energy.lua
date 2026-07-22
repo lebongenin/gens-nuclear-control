@@ -1,6 +1,6 @@
 --================================================--
 -- GEN'S Nuclear Control
--- Version : 0.1.0
+-- Version : 0.2.0
 -- Module  : Energy and Units
 --================================================--
 
@@ -123,6 +123,25 @@ function Energy.formatKelvin(value, decimals)
             { divisor = 1000000000000, suffix = "TK" }
         },
         decimals
+    )
+end
+
+--------------------------------------------------
+-- Percentage formatting
+--------------------------------------------------
+
+function Energy.formatPercentage(value, decimals)
+    value = tonumber(value)
+
+    if not value then
+        return "N/A"
+    end
+
+    decimals = decimals or 2
+
+    return string.format(
+        "%." .. tostring(decimals) .. "f %%",
+        value * 100
     )
 end
 
