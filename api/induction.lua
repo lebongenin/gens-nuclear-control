@@ -145,6 +145,13 @@ function Induction:getEnergyNeeded()
     return energy.joulesToFE(value)
 end
 
+function Induction:getFilledPercentage()
+    return safeCall(
+        self.peripheral,
+        "getEnergyFilledPercentage"
+    )
+end
+
 function Induction:getInput()
     local value, errorMessage = safeCall(
         self.peripheral,
