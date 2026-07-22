@@ -14,27 +14,23 @@ local BASE_URL =
 --------------------------------------------------
 
 local files = {
-
-    -- Core
     "core/discovery.lua",
     "core/logger.lua",
     "core/inspector.lua",
 
-    -- API
     "api/fusion.lua",
 
-    -- UI
     "ui/colors.lua",
     "ui/widgets.lua",
 
-    -- Apps
     "apps/test.lua",
     "apps/logger_test.lua",
     "apps/fusion_test.lua",
     "apps/inspector.lua",
     "apps/fusion_dashboard.lua",
+    "apps/test_methods.lua",
+    "apps/ui_test.lua",
 
-    -- Main
     "gnc.lua"
 }
 
