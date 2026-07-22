@@ -43,4 +43,12 @@ if status.percentage then
             status.percentage * 100
         )
     )
+	
+	local p = peripheral.find("inductionPort") -- ou le type réel de ta Matrix
+
+print(p.getEnergy())
+print(p.getMaxEnergy())
+print(p.getLastInput())
+print(p.getLastOutput())
+
 end
