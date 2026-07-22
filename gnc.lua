@@ -75,35 +75,56 @@ end
 --------------------------------------------------
 
 local function download(remote, localPath)
-
-    local url = BASE_URL .. remote .. "?v=" .. tostring(os.epoch("utc"))
+    local url =
+        BASE_URL
+        .. remote
+        .. "?v="
+        .. tostring(os.epoch("utc"))
 
     createDirectory(localPath)
 
-    local response = http.get(url)
+    local response, requestError = http.get(url)
 
     if not response then
-        return false, "HTTP request failed"
+        return false,
+            "HTTP request failed: "
+            .. tostring(requestError)
     end
 
+    local responseCode = response.getResponseCode()
     local data = response.readAll()
+
     response.close()
+
+    if responseCode ~= 200 then
+        return false,
+            "HTTP "
+            .. tostring(responseCode)
+            .. " - "
+            .. remote
+    end
 
     if not data or data == "" then
         return false, "Empty file"
     end
 
-    local file = fs.open(localPath,"w")
+    local file = fs.open(localPath, "w")
 
     if not file then
-        return false, "Cannot write file"
+        return false,
+            "Cannot write file: "
+            .. tostring(localPath)
     end
 
     file.write(data)
     file.close()
 
-    return true
+    if not fs.exists(localPath) then
+        return false,
+            "File missing after download"
+    end
 
+    return true
 end
 
 --------------------------------------------------
