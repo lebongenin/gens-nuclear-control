@@ -247,7 +247,7 @@ end
 function Fusion:getProduction()
     return safeCall(
         self.peripheral,
-        "getProduction"
+        "getProductionRate"
     )
 end
 
