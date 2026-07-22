@@ -1,6 +1,6 @@
 --================================================--
 -- GEN'S Nuclear Control
--- Version : 0.0.4
+-- Version : 0.1.0
 -- Module  : Fusion Reactor API
 --================================================--
 
@@ -9,6 +9,10 @@ local logger = dofile("/core/logger.lua")
 
 local Fusion = {}
 Fusion.__index = Fusion
+
+--------------------------------------------------
+-- Safe peripheral call
+--------------------------------------------------
 
 local function safeCall(peripheralObject, methodName, ...)
     if not peripheralObject then
@@ -29,6 +33,28 @@ local function safeCall(peripheralObject, methodName, ...)
 
     return table.unpack(result, 2, result.n)
 end
+
+--------------------------------------------------
+-- Normalize Mekanism chemical tables
+--------------------------------------------------
+
+local function normalizeChemical(value)
+    if type(value) ~= "table" then
+        return {
+            amount = 0,
+            chemical = "mekanism:empty"
+        }
+    end
+
+    return {
+        amount = tonumber(value.amount) or 0,
+        chemical = value.name or "mekanism:empty"
+    }
+end
+
+--------------------------------------------------
+-- Constructor
+--------------------------------------------------
 
 function Fusion.new()
     local peripheralObject, name, deviceType =
@@ -54,8 +80,17 @@ function Fusion.new()
     return self
 end
 
-function Fusion:isOnline()
+--------------------------------------------------
+-- Connection
+--------------------------------------------------
+
+function Fusion:isConnected()
     return self.peripheral ~= nil
+end
+
+-- Kept for compatibility with older code.
+function Fusion:isOnline()
+    return self:isConnected()
 end
 
 function Fusion:reconnect()
@@ -66,7 +101,7 @@ function Fusion:reconnect()
     self.name = name
     self.type = deviceType
 
-    return self:isOnline()
+    return self:isConnected()
 end
 
 function Fusion:getName()
@@ -77,6 +112,10 @@ function Fusion:getType()
     return self.type
 end
 
+--------------------------------------------------
+-- Reactor state
+--------------------------------------------------
+
 function Fusion:isFormed()
     return safeCall(self.peripheral, "isFormed")
 end
@@ -86,7 +125,10 @@ function Fusion:isIgnited()
 end
 
 function Fusion:getInjectionRate()
-    return safeCall(self.peripheral, "getInjectionRate")
+    return safeCall(
+        self.peripheral,
+        "getInjectionRate"
+    )
 end
 
 function Fusion:setInjectionRate(rate)
@@ -95,7 +137,11 @@ function Fusion:setInjectionRate(rate)
     end
 
     local result, errorMessage =
-        safeCall(self.peripheral, "setInjectionRate", rate)
+        safeCall(
+            self.peripheral,
+            "setInjectionRate",
+            rate
+        )
 
     if result == nil and errorMessage then
         logger.error(
@@ -114,6 +160,10 @@ function Fusion:setInjectionRate(rate)
     return true
 end
 
+--------------------------------------------------
+-- Temperatures
+--------------------------------------------------
+
 function Fusion:getCaseTemperature()
     return safeCall(
         self.peripheral,
@@ -128,87 +178,125 @@ function Fusion:getPlasmaTemperature()
     )
 end
 
-function Fusion:getIgnitionTemperature()
-    return safeCall(
-        self.peripheral,
-        "getIgnitionTemperature"
-    )
-end
+--------------------------------------------------
+-- Fuel
+--------------------------------------------------
 
 function Fusion:getDTFuel()
-    return safeCall(self.peripheral, "getDTFuel")
-end
+    local value, errorMessage =
+        safeCall(self.peripheral, "getDTFuel")
 
-function Fusion:getDTFuelCapacity()
-    return safeCall(
-        self.peripheral,
-        "getDTFuelCapacity"
-    )
-end
+    if value == nil then
+        return nil, errorMessage
+    end
 
-function Fusion:getDTFuelPercentage()
-    return safeCall(
-        self.peripheral,
-        "getDTFuelFilledPercentage"
-    )
+    return normalizeChemical(value)
 end
 
 function Fusion:getTritium()
-    return safeCall(self.peripheral, "getTritium")
-end
+    local value, errorMessage =
+        safeCall(self.peripheral, "getTritium")
 
-function Fusion:getTritiumCapacity()
-    return safeCall(
-        self.peripheral,
-        "getTritiumCapacity"
-    )
-end
+    if value == nil then
+        return nil, errorMessage
+    end
 
-function Fusion:getTritiumPercentage()
-    return safeCall(
-        self.peripheral,
-        "getTritiumFilledPercentage"
-    )
+    return normalizeChemical(value)
 end
 
 function Fusion:getDeuterium()
-    return safeCall(self.peripheral, "getDeuterium")
+    local value, errorMessage =
+        safeCall(self.peripheral, "getDeuterium")
+
+    if value == nil then
+        return nil, errorMessage
+    end
+
+    return normalizeChemical(value)
 end
 
-function Fusion:getDeuteriumCapacity()
+--------------------------------------------------
+-- Logic and losses
+--------------------------------------------------
+
+function Fusion:getLogicMode()
     return safeCall(
         self.peripheral,
-        "getDeuteriumCapacity"
+        "getLogicMode"
     )
 end
 
-function Fusion:getDeuteriumPercentage()
+function Fusion:getEnvironmentalLoss()
     return safeCall(
         self.peripheral,
-        "getDeuteriumFilledPercentage"
+        "getEnvironmentalLoss"
     )
 end
+
+function Fusion:getTransferLoss()
+    return safeCall(
+        self.peripheral,
+        "getTransferLoss"
+    )
+end
+
+--------------------------------------------------
+-- Complete dashboard status
+--------------------------------------------------
 
 function Fusion:getStatus()
+    if not self:isConnected() then
+        return {
+            connected = false,
+            online = false,
+            formed = false,
+            ignited = false,
+            name = self.name,
+            type = self.type,
+            error = "Fusion Reactor unavailable"
+        }
+    end
+
+    local formed = self:isFormed()
+    local ignited = self:isIgnited()
+
     return {
-        online = self:isOnline(),
+        connected = true,
+
+        -- For the dashboard, ONLINE means ignited.
+        online = ignited == true,
+
         name = self:getName(),
         type = self:getType(),
-        formed = self:isFormed(),
-        ignited = self:isIgnited(),
+
+        formed = formed == true,
+        ignited = ignited == true,
+
         injectionRate = self:getInjectionRate(),
-        caseTemperature = self:getCaseTemperature(),
-        plasmaTemperature = self:getPlasmaTemperature(),
-        ignitionTemperature = self:getIgnitionTemperature(),
-        dtFuel = self:getDTFuel(),
-        dtFuelCapacity = self:getDTFuelCapacity(),
-        dtFuelPercentage = self:getDTFuelPercentage(),
-        tritium = self:getTritium(),
-        tritiumCapacity = self:getTritiumCapacity(),
-        tritiumPercentage = self:getTritiumPercentage(),
-        deuterium = self:getDeuterium(),
-        deuteriumCapacity = self:getDeuteriumCapacity(),
-        deuteriumPercentage = self:getDeuteriumPercentage()
+
+        caseTemperature =
+            self:getCaseTemperature(),
+
+        plasmaTemperature =
+            self:getPlasmaTemperature(),
+
+        logicMode =
+            self:getLogicMode(),
+
+        environmentalLoss =
+            self:getEnvironmentalLoss(),
+
+        transferLoss =
+            self:getTransferLoss(),
+
+        dtFuel =
+            self:getDTFuel(),
+
+        tritium =
+            self:getTritium(),
+
+        deuterium =
+            self:getDeuterium()
     }
 end
 
