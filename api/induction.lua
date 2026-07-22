@@ -200,6 +200,13 @@ function Induction:getInput()
         self.peripheral,
         "getLastInput"
     )
+	
+	   if value == nil then
+        return nil, errorMessage
+    end
+
+    return energy.joulesToFE(value)
+	
 end
 
 function Induction:getOutput()
@@ -207,6 +214,11 @@ function Induction:getOutput()
         self.peripheral,
         "getLastOutput"
     )
+	
+	    if value == nil then
+        return nil, errorMessage
+    end
+	
 end
 
 function Induction:getTransferCapacity()
