@@ -20,6 +20,7 @@ local files = {
 	"core/energy.lua",
 
     "api/fusion.lua",
+	"api/induction.lua",
 
     "ui/colors.lua",
     "ui/widgets.lua",
@@ -31,6 +32,7 @@ local files = {
     "apps/fusion_dashboard.lua",
     "apps/test_methods.lua",
     "apps/ui_test.lua",
+	"apps/induction_test.lua",
 
     "gnc.lua"
 }

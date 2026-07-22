@@ -114,4 +114,36 @@ function discovery.getSystemStatus()
     }
 end
 
+function discovery.getInductionMatrix()
+    for _, name in ipairs(peripheral.getNames()) do
+        local device = peripheral.wrap(name)
+
+        if device then
+            local hasEnergy =
+                type(device.getEnergy) == "function"
+
+            local hasMaxEnergy =
+                type(device.getMaxEnergy) == "function"
+
+            local hasInput =
+                type(device.getLastInput) == "function"
+
+            local hasOutput =
+                type(device.getLastOutput) == "function"
+
+            if hasEnergy
+                and hasMaxEnergy
+                and hasInput
+                and hasOutput then
+
+                return device,
+                    name,
+                    peripheral.getType(name)
+            end
+        end
+    end
+
+    return nil, nil, nil
+end
+
 return discovery
