@@ -67,6 +67,28 @@ local function formatLoss(value)
 end
 
 --------------------------------------------------
+-- Signed energy
+--------------------------------------------------
+
+local function formatSignedEnergy(value)
+    value = tonumber(value)
+
+    if not value then
+        return "N/A"
+    end
+
+    local formatted = Energy.formatFEPerTick(math.abs(value))
+
+    if value > 0 then
+        return "+" .. formatted
+    elseif value < 0 then
+        return "-" .. formatted
+    end
+
+    return formatted
+end
+
+--------------------------------------------------
 -- FE production
 --------------------------------------------------
 
