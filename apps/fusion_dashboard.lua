@@ -63,6 +63,28 @@ local function formatLoss(value)
 end
 
 --------------------------------------------------
+-- FE production
+--------------------------------------------------
+
+local function formatEnergyPerTick(value)
+    value = tonumber(value)
+
+    if not value then
+        return "N/A"
+    end
+
+    if value >= 1000000000 then
+        return string.format("%.2f GFE/t", value / 1000000000)
+    elseif value >= 1000000 then
+        return string.format("%.2f MFE/t", value / 1000000)
+    elseif value >= 1000 then
+        return string.format("%.2f kFE/t", value / 1000)
+    end
+
+    return string.format("%.0f FE/t", value)
+end
+
+--------------------------------------------------
 -- Dashboard loop
 --------------------------------------------------
 
@@ -105,42 +127,50 @@ while true do
         "Injection Rate",
         formatRate(status.injectionRate)
     )
+	
+	ui.field(
+    3,
+    14,
+    "Generation",
+    formatEnergyPerTick(status.production),
+    C.online
+	)
 
-    ui.field(
-        3,
-        14,
-        "Case Temperature",
-        formatTemperature(status.caseTemperature)
-    )
+	ui.field(
+    3,
+    16,
+    "Case Temperature",
+    formatTemperature(status.caseTemperature)
+)
 
-    ui.field(
-        3,
-        16,
-        "Plasma Temperature",
-        formatTemperature(status.plasmaTemperature)
-    )
+	ui.field(
+    3,
+    18,
+    "Plasma Temperature",
+    formatTemperature(status.plasmaTemperature)
+)
 
-    ui.field(
-        3,
-        18,
-        "Logic Mode",
-        status.logicMode or "N/A",
-        C.warning
-    )
+	ui.field(
+    3,
+    20,
+    "Logic Mode",
+    status.logicMode or "N/A",
+    C.warning
+)
 
-    ui.field(
-        3,
-        20,
-        "Environmental Loss",
-        formatLoss(status.environmentalLoss)
-    )
+	ui.field(
+    3,
+    22,
+    "Environmental Loss",
+    formatLoss(status.environmentalLoss)
+)
 
-    ui.field(
-        3,
-        22,
-        "Transfer Loss",
-        formatLoss(status.transferLoss)
-    )
+	ui.field(
+    3,
+    24,
+    "Transfer Loss",
+    formatLoss(status.transferLoss)
+)
 
     ui.footer(os.date("%H:%M:%S"))
 

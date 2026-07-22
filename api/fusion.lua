@@ -241,6 +241,17 @@ function Fusion:getTransferLoss()
 end
 
 --------------------------------------------------
+-- Energy production
+--------------------------------------------------
+
+function Fusion:getProduction()
+    return safeCall(
+        self.peripheral,
+        "getProduction"
+    )
+end
+
+--------------------------------------------------
 -- Complete dashboard status
 --------------------------------------------------
 
@@ -273,6 +284,8 @@ function Fusion:getStatus()
         ignited = ignited == true,
 
         injectionRate = self:getInjectionRate(),
+		
+		production = self:getProduction(),
 
         caseTemperature =
             self:getCaseTemperature(),
