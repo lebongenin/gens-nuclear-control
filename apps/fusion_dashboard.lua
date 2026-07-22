@@ -7,6 +7,7 @@
 local ui = dofile("/ui/widgets.lua")
 local C = dofile("/ui/colors.lua")
 local Fusion = dofile("/api/fusion.lua")
+local Energy = dofile("/core/energy.lua")
 
 --------------------------------------------------
 -- Monitor
@@ -121,33 +122,33 @@ while true do
         status.formed and C.online or C.offline
     )
 
-    ui.field(
-        3,
-        12,
-        "Injection Rate",
-        formatRate(status.injectionRate)
-    )
-	
+	ui.field(
+    3,
+    12,
+    "Injection Rate",
+    formatRate(status.injectionRate)
+)
+
 	ui.field(
     3,
     14,
     "Generation",
-    formatEnergyPerTick(status.production),
+    Energy.formatFEPerTick(status.production),
     C.online
-	)
+)
 
 	ui.field(
     3,
     16,
     "Case Temperature",
-    formatTemperature(status.caseTemperature)
+    Energy.formatKelvin(status.caseTemperature)
 )
 
 	ui.field(
     3,
     18,
     "Plasma Temperature",
-    formatTemperature(status.plasmaTemperature)
+    Energy.formatKelvin(status.plasmaTemperature)
 )
 
 	ui.field(
@@ -162,14 +163,14 @@ while true do
     3,
     22,
     "Environmental Loss",
-    formatLoss(status.environmentalLoss)
+    Energy.formatFEPerTick(status.environmentalLoss)
 )
 
 	ui.field(
     3,
     24,
     "Transfer Loss",
-    formatLoss(status.transferLoss)
+    Energy.formatFEPerTick(status.transferLoss)
 )
 
     ui.footer(os.date("%H:%M:%S"))
