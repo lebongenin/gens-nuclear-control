@@ -6,6 +6,7 @@
 
 local discovery = dofile("/core/discovery.lua")
 local logger = dofile("/core/logger.lua")
+local energy = dofile("/core/energy.lua")
 
 local Fusion = {}
 Fusion.__index = Fusion
@@ -32,6 +33,20 @@ local function safeCall(peripheralObject, methodName, ...)
     end
 
     return table.unpack(result, 2, result.n)
+end
+
+--------------------------------------------------
+-- Mekanism energy conversion
+--------------------------------------------------
+
+local function joulesToFE(value)
+    value = tonumber(value)
+
+    if not value then
+        return nil
+    end
+
+    return value / 2.5
 end
 
 --------------------------------------------------
@@ -227,17 +242,29 @@ function Fusion:getLogicMode()
 end
 
 function Fusion:getEnvironmentalLoss()
-    return safeCall(
+    local value, errorMessage = safeCall(
         self.peripheral,
         "getEnvironmentalLoss"
     )
+
+    if value == nil then
+        return nil, errorMessage
+    end
+
+    return energy.joulesToFE(value)
 end
 
 function Fusion:getTransferLoss()
-    return safeCall(
+    local value, errorMessage = safeCall(
         self.peripheral,
         "getTransferLoss"
     )
+
+    if value == nil then
+        return nil, errorMessage
+    end
+
+    return energy.joulesToFE(value)
 end
 
 --------------------------------------------------
@@ -245,12 +272,17 @@ end
 --------------------------------------------------
 
 function Fusion:getProduction()
-    return safeCall(
+    local value, errorMessage = safeCall(
         self.peripheral,
         "getProductionRate"
     )
-end
 
+    if value == nil then
+        return nil, errorMessage
+    end
+
+    return energy.joulesToFE(value)
+end
 --------------------------------------------------
 -- Complete dashboard status
 --------------------------------------------------

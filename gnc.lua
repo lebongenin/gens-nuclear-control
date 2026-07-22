@@ -17,6 +17,7 @@ local files = {
     "core/discovery.lua",
     "core/logger.lua",
     "core/inspector.lua",
+	"core/energy.lua",
 
     "api/fusion.lua",
 
