@@ -1,205 +1,146 @@
 --================================================--
 -- GEN'S Nuclear Control
--- Version : 0.0.6
--- Application : Universal Peripheral Inspector
+-- Version : 0.0.5
+-- Module  : Inspector
 --================================================--
 
-local inspector = dofile("/core/inspector.lua")
-local logger = dofile("/core/logger.lua")
+local inspector = {}
 
-local OUTPUT_FILE = "/logs/inspector.txt"
+local DEFAULT_MAX_DEPTH = 5
 
---------------------------------------------------
--- Formatting
---------------------------------------------------
+local function sortKeys(tbl)
+    local keys = {}
 
-local function getPeripheralTypes(name)
-    local types = { peripheral.getType(name) }
-
-    local result = {}
-
-    for _, peripheralType in ipairs(types) do
-        if peripheralType ~= nil then
-            result[#result + 1] = tostring(peripheralType)
-        end
+    for key in pairs(tbl) do
+        keys[#keys + 1] = key
     end
 
-    return result
+    table.sort(keys, function(a, b)
+        return tostring(a) < tostring(b)
+    end)
+
+    return keys
 end
 
-local function getPeripheralMethods(name)
-    local success, methods = pcall(
-        peripheral.getMethods,
-        name
-    )
+local function formatPrimitive(value)
+    local valueType = type(value)
 
-    if not success or type(methods) ~= "table" then
-        return {}
+    if valueType == "string" then
+        return '"' .. value .. '"'
     end
 
-    table.sort(methods)
-
-    return methods
+    return tostring(value)
 end
 
---------------------------------------------------
--- Detection
---------------------------------------------------
+local function inspectValue(
+    value,
+    depth,
+    maxDepth,
+    visited,
+    output,
+    name
+)
+    local valueType = type(value)
+    local indent = string.rep("  ", depth)
+    local prefix = indent
 
-local function detectPeripherals()
-    local names = peripheral.getNames()
-    local devices = {}
-
-    table.sort(names)
-
-    for _, name in ipairs(names) do
-        local types = getPeripheralTypes(name)
-        local methods = getPeripheralMethods(name)
-
-        devices[#devices + 1] = {
-            name = name,
-            primaryType = types[1] or "unknown",
-            types = types,
-            methodCount = #methods,
-            methods = methods
-        }
+    if name ~= nil then
+        prefix = prefix .. tostring(name) .. " = "
     end
 
-    return devices
-end
-
---------------------------------------------------
--- Report
---------------------------------------------------
-
-local function buildReport(devices)
-    return {
-        application = "GEN'S Nuclear Control Universal Inspector",
-        version = "0.0.6",
-        peripheralCount = #devices,
-        peripherals = devices
-    }
-end
-
---------------------------------------------------
--- Display
---------------------------------------------------
-
-local function printHeader()
-    term.clear()
-    term.setCursorPos(1, 1)
-
-    term.setTextColor(colors.cyan)
-    print("================================")
-    print(" GNC Universal Inspector")
-    print("================================")
-
-    term.setTextColor(colors.white)
-    print("Version 0.0.6")
-    print()
-end
-
-local function printDevices(devices)
-    if #devices == 0 then
-        term.setTextColor(colors.red)
-        print("No peripherals detected.")
-
-        term.setTextColor(colors.white)
+    if valueType ~= "table" then
+        output[#output + 1] =
+            prefix .. formatPrimitive(value)
         return
     end
 
-    term.setTextColor(colors.lime)
-    print(tostring(#devices) .. " peripheral(s) detected")
-    print()
-
-    for index, device in ipairs(devices) do
-        term.setTextColor(colors.yellow)
-        print(
-            tostring(index)
-            .. ". "
-            .. tostring(device.name)
-        )
-
-        term.setTextColor(colors.lightGray)
-        print(
-            "   Type: "
-            .. tostring(device.primaryType)
-        )
-
-        print(
-            "   Methods: "
-            .. tostring(device.methodCount)
-        )
+    if visited[value] then
+        output[#output + 1] =
+            prefix .. "<circular reference>"
+        return
     end
 
-    term.setTextColor(colors.white)
+    if depth >= maxDepth then
+        output[#output + 1] =
+            prefix .. "<maximum depth reached>"
+        return
+    end
+
+    visited[value] = true
+    output[#output + 1] = prefix .. "{"
+
+    local keys = sortKeys(value)
+
+    if #keys == 0 then
+        output[#output + 1] =
+            string.rep("  ", depth + 1) .. "<empty>"
+    else
+        for _, key in ipairs(keys) do
+            inspectValue(
+                value[key],
+                depth + 1,
+                maxDepth,
+                visited,
+                output,
+                "[" .. tostring(key) .. "]"
+            )
+        end
+    end
+
+    output[#output + 1] = indent .. "}"
+    visited[value] = nil
 end
 
---------------------------------------------------
--- Main
---------------------------------------------------
+function inspector.toLines(value, maxDepth)
+    local output = {}
 
-printHeader()
-
-term.setTextColor(colors.white)
-print("Scanning wired network...")
-print()
-
-local devices = detectPeripherals()
-
-printDevices(devices)
-
-local report = buildReport(devices)
-
-local success, errorMessage = inspector.writeToFile(
-    OUTPUT_FILE,
-    report,
-    10
-)
-
-print()
-
-if not success then
-    term.setTextColor(colors.red)
-    print("Report creation failed.")
-    print(tostring(errorMessage))
-
-    term.setTextColor(colors.white)
-
-    logger.error(
-        "Universal Inspector failed: "
-        .. tostring(errorMessage)
+    inspectValue(
+        value,
+        0,
+        maxDepth or DEFAULT_MAX_DEPTH,
+        {},
+        output,
+        nil
     )
 
-    return
+    return output
 end
 
-logger.info(
-    "Universal Inspector detected "
-    .. tostring(#devices)
-    .. " peripherals"
-)
+function inspector.toString(value, maxDepth)
+    return table.concat(
+        inspector.toLines(value, maxDepth),
+        "\n"
+    )
+end
 
-logger.info(
-    "Inspector report created at "
-    .. OUTPUT_FILE
-)
+function inspector.print(value, maxDepth)
+    local lines = inspector.toLines(value, maxDepth)
 
-term.setTextColor(colors.lime)
-print("Inspection complete!")
+    for _, line in ipairs(lines) do
+        print(line)
+    end
+end
 
-term.setTextColor(colors.white)
-print()
-print("Full report saved to:")
+function inspector.writeToFile(path, value, maxDepth)
+    local parent = fs.getDir(path)
 
-term.setTextColor(colors.lightBlue)
-print(OUTPUT_FILE)
+    if parent ~= "" and not fs.exists(parent) then
+        fs.makeDir(parent)
+    end
 
-term.setTextColor(colors.white)
-print()
-print("Open it with:")
+    local file = fs.open(path, "w")
 
-term.setTextColor(colors.yellow)
-print("edit logs/inspector.txt")
+    if not file then
+        return false, "Unable to open " .. tostring(path)
+    end
 
-term.setTextColor(colors.white)
+    file.write(
+        inspector.toString(value, maxDepth)
+    )
+
+    file.close()
+
+    return true
+end
+
+return inspector

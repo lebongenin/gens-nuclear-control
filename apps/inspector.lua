@@ -1,178 +1,205 @@
 --================================================--
 -- GEN'S Nuclear Control
--- Version : 0.0.5
--- Application : GNC Inspector
+-- Version : 0.0.6
+-- Application : Universal Peripheral Inspector
 --================================================--
 
-local discovery = dofile("/core/discovery.lua")
 local inspector = dofile("/core/inspector.lua")
 local logger = dofile("/core/logger.lua")
 
-local reactor, reactorName, reactorType =
-    discovery.getFusionReactor()
-
 local OUTPUT_FILE = "/logs/inspector.txt"
 
-local methodsToInspect = {
-    "isFormed",
-    "isIgnited",
+--------------------------------------------------
+-- Formatting
+--------------------------------------------------
 
-    "getInjectionRate",
+local function getPeripheralTypes(name)
+    local types = { peripheral.getType(name) }
 
-    "getCaseTemperature",
-    "getPlasmaTemperature",
-    "getIgnitionTemperature",
+    local result = {}
 
-    "getDTFuel",
-    "getDTFuelCapacity",
-    "getDTFuelFilledPercentage",
-    "getDTFuelNeeded",
+    for _, peripheralType in ipairs(types) do
+        if peripheralType ~= nil then
+            result[#result + 1] = tostring(peripheralType)
+        end
+    end
 
-    "getTritium",
-    "getTritiumCapacity",
-    "getTritiumFilledPercentage",
-    "getTritiumNeeded",
+    return result
+end
 
-    "getDeuterium",
-    "getDeuteriumCapacity",
-    "getDeuteriumFilledPercentage",
-    "getDeuteriumNeeded",
+local function getPeripheralMethods(name)
+    local success, methods = pcall(
+        peripheral.getMethods,
+        name
+    )
 
-    "getWater",
-    "getWaterCapacity",
-    "getWaterFilledPercentage",
-    "getWaterNeeded",
+    if not success or type(methods) ~= "table" then
+        return {}
+    end
 
-    "getEnvironmentalLoss",
-    "getTransferLoss",
-    "getHohlraum",
-    "getLogicMode",
-    "isActiveCooledLogic"
-}
+    table.sort(methods)
 
-local function callMethod(device, methodName)
-    local method = device[methodName]
+    return methods
+end
 
-    if type(method) ~= "function" then
-        return {
-            success = false,
-            error = "Unsupported method"
+--------------------------------------------------
+-- Detection
+--------------------------------------------------
+
+local function detectPeripherals()
+    local names = peripheral.getNames()
+    local devices = {}
+
+    table.sort(names)
+
+    for _, name in ipairs(names) do
+        local types = getPeripheralTypes(name)
+        local methods = getPeripheralMethods(name)
+
+        devices[#devices + 1] = {
+            name = name,
+            primaryType = types[1] or "unknown",
+            types = types,
+            methodCount = #methods,
+            methods = methods
         }
     end
 
-    local results = table.pack(pcall(method))
+    return devices
+end
 
-    if not results[1] then
-        return {
-            success = false,
-            error = tostring(results[2])
-        }
-    end
+--------------------------------------------------
+-- Report
+--------------------------------------------------
 
-    local values = {}
-
-    for index = 2, results.n do
-        values[#values + 1] = results[index]
-    end
-
+local function buildReport(devices)
     return {
-        success = true,
-        resultCount = #values,
-        values = values
+        application = "GEN'S Nuclear Control Universal Inspector",
+        version = "0.0.6",
+        peripheralCount = #devices,
+        peripherals = devices
     }
 end
 
-local function buildReport()
-    local report = {
-        application = "GEN'S Nuclear Control Inspector",
-        version = "0.0.5",
-        peripheral = {
-            name = reactorName,
-            type = reactorType
-        },
-        methods = {}
-    }
+--------------------------------------------------
+-- Display
+--------------------------------------------------
 
-    for _, methodName in ipairs(methodsToInspect) do
-        report.methods[methodName] =
-            callMethod(reactor, methodName)
+local function printHeader()
+    term.clear()
+    term.setCursorPos(1, 1)
+
+    term.setTextColor(colors.cyan)
+    print("================================")
+    print(" GNC Universal Inspector")
+    print("================================")
+
+    term.setTextColor(colors.white)
+    print("Version 0.0.6")
+    print()
+end
+
+local function printDevices(devices)
+    if #devices == 0 then
+        term.setTextColor(colors.red)
+        print("No peripherals detected.")
+
+        term.setTextColor(colors.white)
+        return
     end
 
-    return report
-end
+    term.setTextColor(colors.lime)
+    print(tostring(#devices) .. " peripheral(s) detected")
+    print()
 
-term.clear()
-term.setCursorPos(1, 1)
+    for index, device in ipairs(devices) do
+        term.setTextColor(colors.yellow)
+        print(
+            tostring(index)
+            .. ". "
+            .. tostring(device.name)
+        )
 
-term.setTextColor(colors.cyan)
-print("================================")
-print("      GNC Inspector")
-print("================================")
+        term.setTextColor(colors.lightGray)
+        print(
+            "   Type: "
+            .. tostring(device.primaryType)
+        )
 
-term.setTextColor(colors.white)
-print("Version 0.0.5")
-print()
+        print(
+            "   Methods: "
+            .. tostring(device.methodCount)
+        )
+    end
 
-if not reactor then
-    term.setTextColor(colors.red)
-    print("Fusion Reactor: NOT FOUND")
     term.setTextColor(colors.white)
-
-    logger.error(
-        "Inspector could not find Fusion Reactor"
-    )
-
-    return
 end
 
-term.setTextColor(colors.lime)
-print("Fusion Reactor: ONLINE")
-term.setTextColor(colors.lightGray)
-print("Name: " .. tostring(reactorName))
-print("Type: " .. tostring(reactorType))
-print()
+--------------------------------------------------
+-- Main
+--------------------------------------------------
+
+printHeader()
 
 term.setTextColor(colors.white)
-print("Inspecting methods...")
+print("Scanning wired network...")
+print()
 
-local report = buildReport()
+local devices = detectPeripherals()
 
-local success, errorMessage =
-    inspector.writeToFile(
-        OUTPUT_FILE,
-        report,
-        8
-    )
+printDevices(devices)
+
+local report = buildReport(devices)
+
+local success, errorMessage = inspector.writeToFile(
+    OUTPUT_FILE,
+    report,
+    10
+)
+
+print()
 
 if not success then
     term.setTextColor(colors.red)
-    print("FAILED")
+    print("Report creation failed.")
     print(tostring(errorMessage))
+
     term.setTextColor(colors.white)
 
     logger.error(
-        "Inspector failed: "
-            .. tostring(errorMessage)
+        "Universal Inspector failed: "
+        .. tostring(errorMessage)
     )
 
     return
 end
 
 logger.info(
+    "Universal Inspector detected "
+    .. tostring(#devices)
+    .. " peripherals"
+)
+
+logger.info(
     "Inspector report created at "
-        .. OUTPUT_FILE
+    .. OUTPUT_FILE
 )
 
 term.setTextColor(colors.lime)
 print("Inspection complete!")
+
 term.setTextColor(colors.white)
 print()
-print("Report saved to:")
+print("Full report saved to:")
+
 term.setTextColor(colors.lightBlue)
 print(OUTPUT_FILE)
+
 term.setTextColor(colors.white)
 print()
 print("Open it with:")
+
 term.setTextColor(colors.yellow)
 print("edit logs/inspector.txt")
+
 term.setTextColor(colors.white)
