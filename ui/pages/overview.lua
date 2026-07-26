@@ -59,12 +59,15 @@ local function drawSystemHeader(
     local badge = " " .. status .. " "
 
     Layout.statusBadge(
-        monitor,
-        x + width - #badge,
-        y,
-        status,
-        level
-    )
+    monitor,
+    x + width - #badge,
+    y,
+    status,
+    {
+        level = level
+    }
+)
+
 end
 
 local function drawUnavailable(
@@ -250,19 +253,22 @@ local function drawFission(
     )
 
     Layout.labelValue(
-        monitor,
-        innerX,
-        innerY + 4,
-        innerWidth,
-        "Damage",
-        string.format(
-            "%.1f%%",
-            state.damagePercent
-        ),
-        state.damagePercent > 0
+		monitor,
+		innerX,
+		innerY + 4,
+		innerWidth,
+		"Damage",
+		string.format(
+			"%.1f%%",
+			state.damagePercent
+    ),
+    {
+        valueColor =
+            state.damagePercent > 0
             and Layout.theme.warning
             or Layout.theme.safe
-    )
+    }
+)
 
     Layout.labelValue(
         monitor,
@@ -679,16 +685,19 @@ local function drawSystem(
     )
 
     Layout.labelValue(
-        monitor,
-        innerX,
-        innerY + 2,
-        innerWidth,
-        "Warnings",
-        tostring(warningCount),
-        warningCount > 0
+		monitor,
+		innerX,
+		innerY + 2,
+		innerWidth,
+		"Warnings",
+		tostring(warningCount),
+    {
+        valueColor =
+            warningCount > 0
             and Layout.theme.warning
             or Layout.theme.safe
-    )
+    }
+)
 
     Layout.labelValue(
         monitor,
