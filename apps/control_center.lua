@@ -38,6 +38,9 @@ local OverviewPage =
 local FusionPage =
     dofile("/ui/pages/fusion.lua")
 
+local FissionPage =
+    dofile("/ui/pages/fission.lua")
+
 --------------------------------------------------
 -- Configuration
 --------------------------------------------------
@@ -459,6 +462,10 @@ local pages = {
 
     fusion = function()
         return FusionPage.draw(context)
+    end,
+
+    fission = function()
+        return FissionPage.draw(context)
     end
 
     -- Les pages détaillées seront ajoutées ici :
