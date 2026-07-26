@@ -53,6 +53,8 @@ local files = {
 	"ui/pages/fission.lua",
 	"ui/pages/induction.lua",
 	"ui/pages/sps.lua",
+	"ui/pages/ae2_common.lua",
+	"ui/pages/ae2_overview.lua",
 
     --------------------------------------------------
     -- Applications

@@ -47,6 +47,9 @@ local InductionPage =
 local SPSPage =
     dofile("/ui/pages/sps.lua")
 
+local AE2OverviewPage =
+    dofile("/ui/pages/ae2_overview.lua")
+
 --------------------------------------------------
 -- Configuration
 --------------------------------------------------
@@ -480,6 +483,10 @@ local pages = {
 
     sps = function()
         return SPSPage.draw(context)
+    end,
+
+    ae2_overview = function()
+        return AE2OverviewPage.draw(context)
     end
 
     -- Les pages détaillées seront ajoutées ici :
