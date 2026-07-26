@@ -24,6 +24,7 @@ local files = {
     "core/logger.lua",
 	"core/safe_call.lua",
 	"api/fission.lua",
+	"core/monitor_manager.lua",
 
     --------------------------------------------------
     -- APIs
@@ -41,12 +42,14 @@ local files = {
 
     "ui/colors.lua",
     "ui/widgets.lua",
+	"ui/layout.lua",
 
     --------------------------------------------------
     -- Applications
     --------------------------------------------------
 
     "apps/fusion_dashboard.lua",
+	"apps/overview_dashboard.lua",
 
     --------------------------------------------------
     -- Development tools
