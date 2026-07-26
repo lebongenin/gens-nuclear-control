@@ -53,8 +53,13 @@ local files = {
 
     "tools/inspector.lua",
     "tools/system_probe.lua",
+	
+	"tools/tests/testlib.lua",
 	"tools/tests/safe_call_test.lua",
 	"tools/tests/fission_test.lua",
+	"tools/tests/fusion_test.lua",
+	"tools/tests/induction_test.lua",
+	"tools/tests/sps_test.lua",
 
     --------------------------------------------------
     -- Launcher
