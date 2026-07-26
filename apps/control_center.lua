@@ -41,6 +41,9 @@ local FusionPage =
 local FissionPage =
     dofile("/ui/pages/fission.lua")
 
+local InductionPage =
+    dofile("/ui/pages/induction.lua")
+
 --------------------------------------------------
 -- Configuration
 --------------------------------------------------
@@ -466,6 +469,10 @@ local pages = {
 
     fission = function()
         return FissionPage.draw(context)
+    end,
+
+    induction = function()
+        return InductionPage.draw(context)
     end
 
     -- Les pages détaillées seront ajoutées ici :

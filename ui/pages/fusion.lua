@@ -5,6 +5,7 @@
 --================================================--
 
 local FusionPage = {}
+local PAGE_COLOR = colors.cyan
 
 local function tankOrEmpty(tank)
     if type(tank) == "table" then return tank end
@@ -21,6 +22,8 @@ end
 -- Redraw the complete title strip. This prevents stale characters from
 -- appearing at panel junctions on large multi-block monitors.
 local function drawPanel(monitor, Layout, cell, title, borderColor)
+    borderColor = borderColor or PAGE_COLOR
+
     Layout.panel(
         monitor,
         cell.x,
@@ -38,7 +41,7 @@ local function drawPanel(monitor, Layout, cell, title, borderColor)
             cell.y,
             string.rep(" ", cell.width - 2),
             colors.white,
-            borderColor or colors.gray
+            borderColor
         )
 
         Layout.writeAt(
@@ -47,7 +50,7 @@ local function drawPanel(monitor, Layout, cell, title, borderColor)
             cell.y,
             Layout.truncate(" " .. title .. " ", cell.width - 4),
             colors.white,
-            borderColor or colors.gray
+            borderColor
         )
     end
 end
@@ -118,7 +121,7 @@ function FusionPage.draw(context)
     local backWidth = math.min(12, width)
     local backX = 1
     local backY = height
-    drawButton(monitor, Layout, backX, backY, backWidth, "< BACK", colors.gray)
+    drawButton(monitor, Layout, backX, backY, backWidth, "< BACK", PAGE_COLOR)
     navigation:registerBackButton(backX, backY, backWidth, 1, {
         id = "fusion_back",
         page = "fusion",

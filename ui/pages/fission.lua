@@ -5,6 +5,7 @@
 --================================================--
 
 local FissionPage = {}
+local PAGE_COLOR = colors.orange
 
 local function tankOrEmpty(tank)
     if type(tank) == "table" then return tank end
@@ -19,6 +20,8 @@ local function drawButton(monitor, Layout, x, y, width, text, color)
 end
 
 local function drawPanel(monitor, Layout, cell, title, borderColor)
+    borderColor = borderColor or PAGE_COLOR
+
     Layout.panel(
         monitor,
         cell.x,
@@ -112,7 +115,7 @@ function FissionPage.draw(context)
     local backWidth = math.min(12, width)
     local backX = 1
     local backY = height
-    drawButton(monitor, Layout, backX, backY, backWidth, "< BACK", colors.gray)
+    drawButton(monitor, Layout, backX, backY, backWidth, "< BACK", PAGE_COLOR)
     navigation:registerBackButton(backX, backY, backWidth, 1, {
         id = "fission_back",
         page = "fission",
