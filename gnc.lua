@@ -52,6 +52,7 @@ local files = {
 	"ui/pages/fusion.lua",
 	"ui/pages/fission.lua",
 	"ui/pages/induction.lua",
+	"ui/pages/sps.lua",
 
     --------------------------------------------------
     -- Applications

@@ -44,6 +44,9 @@ local FissionPage =
 local InductionPage =
     dofile("/ui/pages/induction.lua")
 
+local SPSPage =
+    dofile("/ui/pages/sps.lua")
+
 --------------------------------------------------
 -- Configuration
 --------------------------------------------------
@@ -473,6 +476,10 @@ local pages = {
 
     induction = function()
         return InductionPage.draw(context)
+    end,
+
+    sps = function()
+        return SPSPage.draw(context)
     end
 
     -- Les pages détaillées seront ajoutées ici :
