@@ -833,6 +833,10 @@ function Layout.crop(text, width)
     return crop(text, width)
 end
 
+function Layout.truncate(text, width)
+    return crop(text, width)
+end
+
 --------------------------------------------------
 -- Panel
 --------------------------------------------------
