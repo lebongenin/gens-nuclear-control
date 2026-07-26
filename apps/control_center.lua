@@ -88,6 +88,70 @@ if not configureMonitor(monitor) then
 end
 
 --------------------------------------------------
+-- Layout compatibility adapter
+--------------------------------------------------
+
+local function createLayoutAdapter(
+    baseLayout,
+    getCurrentMonitor
+)
+    local adapter = {}
+
+    setmetatable(adapter, {
+        __index = function(_, key)
+            local value = baseLayout[key]
+
+            if type(value) ~= "function" then
+                return value
+            end
+
+            return function(...)
+                local arguments = table.pack(...)
+
+                local currentMonitor =
+                    getCurrentMonitor()
+
+                -- overview.lua passes the monitor first,
+                -- while layout.lua works on term.current().
+                if arguments.n > 0
+                    and arguments[1]
+                        == currentMonitor then
+
+                    for index = 1,
+                        arguments.n - 1 do
+
+                        arguments[index] =
+                            arguments[index + 1]
+                    end
+
+                    arguments[arguments.n] = nil
+                    arguments.n =
+                        arguments.n - 1
+                end
+
+                return value(
+                    table.unpack(
+                        arguments,
+                        1,
+                        arguments.n
+                    )
+                )
+            end
+        end
+    })
+
+    return adapter
+end
+
+local PageLayout =
+    createLayoutAdapter(
+        Layout,
+        function()
+            return monitor
+        end
+    )
+
+--------------------------------------------------
 -- Devices
 --------------------------------------------------
 
@@ -117,7 +181,7 @@ local context = {
     monitorName = monitorName,
 
     manager = manager,
-    layout = Layout,
+    layout = PageLayout,
     navigation = navigation,
 
     devices = devices,
@@ -391,11 +455,20 @@ end
 
 local function safeRender()
     local success, result =
-        pcall(renderCurrentPage)
+        manager:render(
+            monitor,
+            renderCurrentPage
+        )
 
     if not success then
         lastRenderError = tostring(result)
-        drawError(lastRenderError)
+
+        manager:render(
+            monitor,
+            function()
+                drawError(lastRenderError)
+            end
+        )
 
         return false, lastRenderError
     end
