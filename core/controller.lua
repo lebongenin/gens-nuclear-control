@@ -130,11 +130,46 @@ function Controller:start()
     -- Initial blocking read happens once before the first screen is shown.
     self:refreshData()
     self:render()
-    self:schedulePoll()
 
-    while self.running do
-        self:handleEvent({ os.pullEventRaw() })
+    local function eventLoop()
+        while self.running do
+            local event = { os.pullEventRaw() }
+            local name = event[1]
+
+            -- Polling is handled by its own coroutine below. Keeping touch
+            -- handling here prevents peripheral calls from consuming clicks.
+            if name ~= "timer" then
+                self:handleEvent(event)
+            end
+        end
     end
+
+    local function pollingLoop()
+        while self.running do
+            local timer = os.startTimer(self.pollInterval)
+
+            while self.running do
+                local event, timerId = os.pullEventRaw()
+
+                if event == "timer" and timerId == timer then
+                    break
+                end
+            end
+
+            if self.running then
+                self:refreshNextDevice()
+                self:render()
+            end
+        end
+    end
+
+    -- ComputerCraft duplicates events to both parallel coroutines. A slow
+    -- peripheral getter may yield, but the event loop still receives every
+    -- monitor_touch independently.
+    parallel.waitForAny(
+        eventLoop,
+        pollingLoop
+    )
 
     return true
 end
