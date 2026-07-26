@@ -10,7 +10,7 @@ local MonitorManager =
 local Navigation =
     dofile("/core/navigation.lua")
 
-local Pagelayout =
+local Layout =
     dofile("/ui/layout.lua")
 
 local Fusion =
@@ -141,7 +141,7 @@ local function createLayoutAdapter(
     return adapter
 end
 
-local PageLayout =
+local Layout =
     createLayoutAdapter(
         Layout,
         function()
@@ -179,7 +179,7 @@ local context = {
     monitorName = monitorName,
 
     manager = manager,
-    layout = Pagelayout,
+    layout = Layout,
     navigation = navigation,
 
     devices = devices,
@@ -276,9 +276,9 @@ local function drawPlaceholder(page)
     local width, height =
         monitor.getSize()
 
-    PageLayout.clear(monitor)
+    Layout.clear(monitor)
 
-    PageLayout.header(
+    Layout.header(
         monitor,
         "GEN'S NUCLEAR CONTROL",
         pageTitle(page)
@@ -373,7 +373,7 @@ local function drawPlaceholder(page)
             3
         )
 
-    PageLayout.panel(
+    Layout.panel(
         monitor,
         panelX,
         panelY,
@@ -404,7 +404,7 @@ local function drawPlaceholder(page)
             1
         )
 
-    PageLayout.writeAt(
+    Layout.writeAt(
         monitor,
         firstX,
         messageY,
@@ -427,7 +427,7 @@ local function drawPlaceholder(page)
             1
         )
 
-    PageLayout.writeAt(
+    Layout.writeAt(
         monitor,
         secondX,
         messageY + 2,
@@ -464,15 +464,15 @@ local function drawError(err)
     local width, height =
         monitor.getSize()
 
-    PagePagelayout.clear(monitor)
+    PageLayout.clear(monitor)
 
-    PagePagelayout.header(
+    PageLayout.header(
         monitor,
         "GEN'S NUCLEAR CONTROL",
         "CONTROL CENTER ERROR"
     )
 
-    PagePagelayout.panel(
+    PageLayout.panel(
         monitor,
         2,
         5,
@@ -482,18 +482,18 @@ local function drawError(err)
         colors.red
     )
 
-    PagePagelayout.writeAt(
+    PageLayout.writeAt(
         monitor,
         4,
         7,
-        PagePagelayout.truncate(
+        PageLayout.truncate(
             tostring(err),
             math.max(width - 6, 1)
         ),
         colors.red
     )
 
-    PagePagelayout.writeAt(
+    PageLayout.writeAt(
         monitor,
         4,
         9,
