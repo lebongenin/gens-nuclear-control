@@ -466,8 +466,6 @@ test:expectType(
 
 test:section("REGION LOOKUP")
 
-navigation:reset("overview")
-
 local found =
     navigation:findRegion(
         "back",
