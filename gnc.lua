@@ -23,6 +23,7 @@ local files = {
     "core/inspector.lua",
     "core/logger.lua",
 	"core/safe_call.lua",
+	"api/fission.lua",
 
     --------------------------------------------------
     -- APIs
