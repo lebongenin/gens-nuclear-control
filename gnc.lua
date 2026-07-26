@@ -55,6 +55,10 @@ local files = {
 	"ui/pages/sps.lua",
 	"ui/pages/ae2_common.lua",
 	"ui/pages/ae2_overview.lua",
+	"ui/pages/ae2_items.lua",
+	"ui/pages/ae2_cells.lua",
+	"ui/pages/ae2_drives.lua",
+	"ui/pages/ae2_crafting.lua",
 
     --------------------------------------------------
     -- Applications
