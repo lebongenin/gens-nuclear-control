@@ -35,6 +35,14 @@ function Cache.new(devices, options)
     self.version = 0
     self.lastUpdatedAt = nil
     self.updating = false
+    self.updateOrder = {}
+    self.updateCursor = 0
+
+    for name in pairs(self.devices) do
+        self.updateOrder[#self.updateOrder + 1] = name
+    end
+
+    table.sort(self.updateOrder)
 
     return self
 end
@@ -45,6 +53,21 @@ function Cache:setDevice(name, device)
     end
 
     self.devices[name] = device
+
+    local known = false
+
+    for _, existingName in ipairs(self.updateOrder) do
+        if existingName == name then
+            known = true
+            break
+        end
+    end
+
+    if not known then
+        self.updateOrder[#self.updateOrder + 1] = name
+        table.sort(self.updateOrder)
+    end
+
     return true
 end
 
@@ -154,6 +177,35 @@ function Cache:updateAll()
     report.deviceCount = countEntries(self.devices)
 
     return report.success, report
+end
+
+-- Update a single peripheral per cycle. This keeps monitor_touch events
+-- responsive even when one mod exposes comparatively slow getters.
+function Cache:updateNext()
+    if self.updating then
+        return false, nil, "Cache update already in progress"
+    end
+
+    if #self.updateOrder == 0 then
+        return false, nil, "No devices registered"
+    end
+
+    self.updateCursor = self.updateCursor + 1
+
+    if self.updateCursor > #self.updateOrder then
+        self.updateCursor = 1
+    end
+
+    local name = self.updateOrder[self.updateCursor]
+
+    self.updating = true
+    local success, state, err = self:updateOne(name)
+    self.updating = false
+
+    self.version = self.version + 1
+    self.lastUpdatedAt = now()
+
+    return success, name, state, err
 end
 
 function Cache:invalidate(name)

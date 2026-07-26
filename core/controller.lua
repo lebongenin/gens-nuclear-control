@@ -34,6 +34,14 @@ function Controller:refreshData()
     return self.cache:updateAll()
 end
 
+function Controller:refreshNextDevice()
+    if not self.cache then
+        return false, "Cache unavailable"
+    end
+
+    return self.cache:updateNext()
+end
+
 function Controller:render()
     if not self.renderer then
         return false, "Renderer unavailable"
@@ -71,7 +79,9 @@ function Controller:handleEvent(event)
     end
 
     if name == "timer" and event[2] == self.pollTimer then
-        self:refreshData()
+        -- Only one peripheral read per tick. Touches no longer wait for a
+        -- complete Fusion + Fission + Induction + SPS + AE2 polling pass.
+        self:refreshNextDevice()
         self:render()
         self:schedulePoll()
         return true

@@ -40,7 +40,9 @@ local OverviewPage =
 --------------------------------------------------
 
 local VERSION = "0.2.0"
-local REFRESH_RATE = 0.5
+-- One device is refreshed per tick. With five devices, each complete
+-- polling round takes roughly one second while touch stays responsive.
+local REFRESH_RATE = 0.2
 local TEXT_SCALE = 0.5
 
 local previousTerminal = term.current()
