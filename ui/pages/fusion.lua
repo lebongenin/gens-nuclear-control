@@ -18,9 +18,43 @@ local function drawButton(monitor, Layout, x, y, width, text, color)
     Layout.writeAt(monitor, textX, y, text, colors.white, color)
 end
 
+-- Redraw the complete title strip. This prevents stale characters from
+-- appearing at panel junctions on large multi-block monitors.
+local function drawPanel(monitor, Layout, cell, title, borderColor)
+    Layout.panel(
+        monitor,
+        cell.x,
+        cell.y,
+        cell.width,
+        cell.height,
+        title,
+        borderColor
+    )
+
+    if cell.width > 2 then
+        Layout.writeAt(
+            monitor,
+            cell.x + 1,
+            cell.y,
+            string.rep(" ", cell.width - 2),
+            colors.white,
+            borderColor or colors.gray
+        )
+
+        Layout.writeAt(
+            monitor,
+            cell.x + 2,
+            cell.y,
+            Layout.truncate(" " .. title .. " ", cell.width - 4),
+            colors.white,
+            borderColor or colors.gray
+        )
+    end
+end
+
 local function drawTank(monitor, Layout, cell, title, tank)
     tank = tankOrEmpty(tank)
-    Layout.panel(monitor, cell.x, cell.y, cell.width, cell.height, title)
+    drawPanel(monitor, Layout, cell, title)
 
     local x = cell.x + 2
     local y = cell.y + 2
@@ -82,9 +116,10 @@ function FusionPage.draw(context)
     Layout.header(monitor, "GEN'S NUCLEAR CONTROL", "FUSION REACTOR")
 
     local backWidth = math.min(12, width)
-    local backX = math.max(width - backWidth + 1, 1)
-    drawButton(monitor, Layout, backX, 1, backWidth, "< BACK", colors.gray)
-    navigation:registerBackButton(backX, 1, backWidth, 2, {
+    local backX = 1
+    local backY = height
+    drawButton(monitor, Layout, backX, backY, backWidth, "< BACK", colors.gray)
+    navigation:registerBackButton(backX, backY, backWidth, 1, {
         id = "fusion_back",
         page = "fusion",
         monitorName = context.monitorName,
@@ -102,7 +137,7 @@ function FusionPage.draw(context)
     )
 
     local cell = cells[1]
-    Layout.panel(monitor, cell.x, cell.y, cell.width, cell.height, "STATUS")
+    drawPanel(monitor, Layout, cell, "STATUS")
     local x, y = cell.x + 2, cell.y + 2
     local innerWidth = math.max(cell.width - 4, 1)
     Layout.statusBadge(monitor, x, y, state.ignited and "ACTIVE" or "IDLE", {})
@@ -113,7 +148,7 @@ function FusionPage.draw(context)
     })
 
     cell = cells[2]
-    Layout.panel(monitor, cell.x, cell.y, cell.width, cell.height, "ENERGY")
+    drawPanel(monitor, Layout, cell, "ENERGY")
     x, y = cell.x + 2, cell.y + 2
     innerWidth = math.max(cell.width - 4, 1)
     Layout.labelValue(monitor, x, y, innerWidth, "Production", Layout.formatNumber(state.productionRate, 2) .. " FE/t")
@@ -124,7 +159,7 @@ function FusionPage.draw(context)
     Layout.labelValue(monitor, x, y + 4, innerWidth, "Transfer loss", Layout.formatNumber(state.transferLoss, 2) .. " FE/t")
 
     cell = cells[3]
-    Layout.panel(monitor, cell.x, cell.y, cell.width, cell.height, "PLASMA")
+    drawPanel(monitor, Layout, cell, "PLASMA")
     x, y = cell.x + 2, cell.y + 2
     innerWidth = math.max(cell.width - 4, 1)
     Layout.labelValue(monitor, x, y, innerWidth, "Injection", Layout.formatNumber(state.injectionRate, 1) .. " mB/t")
@@ -136,11 +171,22 @@ function FusionPage.draw(context)
     drawTank(monitor, Layout, cells[6], "TRITIUM", state.tritium)
 
     local warnings = safety.warnings or {}
-    Layout.footer(
+    local footerText = #warnings > 0
+        and ("WARNING: " .. tostring(warnings[1]))
+        or "Fusion reactor nominal | Cached live data"
+
+    Layout.writeAt(
         monitor,
+        backWidth + 2,
+        height,
+        Layout.truncate(
+            footerText,
+            math.max(width - backWidth - 1, 1)
+        ),
         #warnings > 0
-            and ("WARNING: " .. tostring(warnings[1]))
-            or "Fusion reactor nominal | Cached live data"
+            and Layout.theme.warning
+            or Layout.theme.muted,
+        colors.black
     )
 
     return { state = state, cells = cells }
