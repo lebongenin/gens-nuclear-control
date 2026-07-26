@@ -50,13 +50,6 @@ local files = {
     "tools/inspector.lua",
     "tools/system_probe.lua",
 
-    "tools/tests/general_test.lua",
-    "tools/tests/logger_test.lua",
-    "tools/tests/fusion_test.lua",
-    "tools/tests/induction_test.lua",
-    "tools/tests/methods_test.lua",
-    "tools/tests/ui_test.lua",
-
     --------------------------------------------------
     -- Launcher
     --------------------------------------------------
