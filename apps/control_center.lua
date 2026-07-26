@@ -373,7 +373,7 @@ local function drawPlaceholder(page)
             3
         )
 
-    PagesLayout.panel(
+    PageLayout.panel(
         monitor,
         panelX,
         panelY,
