@@ -141,7 +141,7 @@ local function createLayoutAdapter(
     return adapter
 end
 
-local Layout =
+local PageLayout =
     createLayoutAdapter(
         Layout,
         function()
@@ -179,7 +179,7 @@ local context = {
     monitorName = monitorName,
 
     manager = manager,
-    layout = Layout,
+    layout = PageLayout,
     navigation = navigation,
 
     devices = devices,
@@ -276,9 +276,9 @@ local function drawPlaceholder(page)
     local width, height =
         monitor.getSize()
 
-    Layout.clear(monitor)
+    PageLayout.clear(monitor)
 
-    Layout.header(
+    PageLayout.header(
         monitor,
         "GEN'S NUCLEAR CONTROL",
         pageTitle(page)
@@ -373,7 +373,7 @@ local function drawPlaceholder(page)
             3
         )
 
-    Layout.panel(
+    PagesLayout.panel(
         monitor,
         panelX,
         panelY,
@@ -404,7 +404,7 @@ local function drawPlaceholder(page)
             1
         )
 
-    Layout.writeAt(
+    PageLayout.writeAt(
         monitor,
         firstX,
         messageY,
@@ -427,7 +427,7 @@ local function drawPlaceholder(page)
             1
         )
 
-    Layout.writeAt(
+    PageLayout.writeAt(
         monitor,
         secondX,
         messageY + 2,
