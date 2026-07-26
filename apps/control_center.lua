@@ -43,43 +43,48 @@ local TEXT_SCALE = 0.5
 -- Monitor setup
 --------------------------------------------------
 
-local manager = MonitorManager.new()
+local manager = MonitorManager.new({
+    defaultScale = TEXT_SCALE,
+    primaryRole = "overview"
+})
 
-local monitor, monitorEntry =
-    manager:getOverview()
+local monitor, monitorName =
+    manager:getPrimary()
 
 if not monitor then
     error("No Advanced Monitor found")
 end
 
-local monitorInfo =
-    manager:getInfo(monitor)
-
-local monitorName =
-    monitorInfo
-    and monitorInfo.name
-    or (
-        monitorEntry
-        and monitorEntry.name
-    )
-    or "unknown"
-
-local configured, configureError =
-    manager:configureMonitor(
-        monitor,
-        {
-            textScale = TEXT_SCALE,
-            backgroundColor = colors.black,
-            textColor = colors.white,
-            clear = true
-        }
+local scaleConfigured, scaleError =
+    manager:setScale(
+        monitorName,
+        TEXT_SCALE
     )
 
-if not configured then
+if not scaleConfigured then
     error(
-        "Unable to configure monitor: "
-        .. tostring(configureError)
+        "Unable to configure monitor scale: "
+        .. tostring(scaleError)
     )
+end
+
+local function configureMonitor(target)
+    if not target then
+        return false
+    end
+
+    local success = pcall(function()
+        target.setBackgroundColor(colors.black)
+        target.setTextColor(colors.white)
+        target.clear()
+        target.setCursorPos(1, 1)
+    end)
+
+    return success
+end
+
+if not configureMonitor(monitor) then
+    error("Unable to configure monitor")
 end
 
 --------------------------------------------------
@@ -434,22 +439,36 @@ local function handleMonitorResize(
     manager:refresh()
 
     local refreshedMonitor =
-        manager:getByName(monitorName)
+        manager:get(monitorName)
 
-    if refreshedMonitor then
-        monitor = refreshedMonitor
-        context.monitor = refreshedMonitor
+    if not refreshedMonitor then
+        local fallbackMonitor,
+            fallbackName =
+            manager:getPrimary()
 
-        manager:configureMonitor(
-            monitor,
-            {
-                textScale = TEXT_SCALE,
-                backgroundColor = colors.black,
-                textColor = colors.white,
-                clear = true
-            }
-        )
+        if not fallbackMonitor then
+            return false
+        end
+
+        refreshedMonitor = fallbackMonitor
+        monitorName = fallbackName
+        context.monitorName = fallbackName
     end
+
+    monitor = refreshedMonitor
+    context.monitor = refreshedMonitor
+
+    local scaleConfigured =
+        manager:setScale(
+            monitorName,
+            TEXT_SCALE
+        )
+
+    if not scaleConfigured then
+        return false
+    end
+
+    configureMonitor(monitor)
 
     return true
 end
@@ -493,10 +512,32 @@ local function main()
             )
 
         elseif eventName == "peripheral"
-            or eventName == "peripheral_detach" then
+    or eventName == "peripheral_detach" then
 
-            manager:refresh()
-            redraw = true
+    local changed =
+        manager:handlePeripheralEvent(
+            eventName,
+            event[2]
+        )
+
+    if changed then
+        local refreshedMonitor =
+            manager:get(monitorName)
+
+        if refreshedMonitor then
+            monitor = refreshedMonitor
+            context.monitor = refreshedMonitor
+
+            manager:setScale(
+                monitorName,
+                TEXT_SCALE
+            )
+
+            configureMonitor(monitor)
+        end
+
+        redraw = true
+    end
 
         elseif eventName == "terminate" then
             break
