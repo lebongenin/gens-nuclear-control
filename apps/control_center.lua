@@ -50,6 +50,11 @@ local SPSPage =
 local AE2OverviewPage =
     dofile("/ui/pages/ae2_overview.lua")
 
+local AE2ItemsPage = dofile("/ui/pages/ae2_items.lua")
+local AE2CellsPage = dofile("/ui/pages/ae2_cells.lua")
+local AE2DrivesPage = dofile("/ui/pages/ae2_drives.lua")
+local AE2CraftingPage = dofile("/ui/pages/ae2_crafting.lua")
+
 --------------------------------------------------
 -- Configuration
 --------------------------------------------------
@@ -487,6 +492,22 @@ local pages = {
 
     ae2_overview = function()
         return AE2OverviewPage.draw(context)
+    end,
+
+    ae2_items = function()
+        return AE2ItemsPage.draw(context)
+    end,
+
+    ae2_cells = function()
+        return AE2CellsPage.draw(context)
+    end,
+
+    ae2_drives = function()
+        return AE2DrivesPage.draw(context)
+    end,
+
+    ae2_crafting = function()
+        return AE2CraftingPage.draw(context)
     end
 
     -- Les pages détaillées seront ajoutées ici :

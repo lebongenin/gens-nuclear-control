@@ -37,6 +37,8 @@ function Cache.new(devices, options)
     self.updating = false
     self.updateOrder = {}
     self.updateCursor = 0
+    self.details = {}
+    self.detailRequests = {}
 
     for name in pairs(self.devices) do
         self.updateOrder[#self.updateOrder + 1] = name
@@ -81,6 +83,83 @@ end
 
 function Cache:getMetadata(name)
     return self.metadata[name]
+end
+
+function Cache:getDetail(key)
+    local entry = self.details[key]
+    return entry and entry.value or nil
+end
+
+function Cache:getDetailMetadata(key)
+    return self.details[key]
+end
+
+function Cache:requestDetail(key, deviceName, methodName, ttl)
+    if type(key) ~= "string"
+        or type(deviceName) ~= "string"
+        or type(methodName) ~= "string" then
+        return false, "Invalid detail request"
+    end
+
+    local entry = self.details[key]
+    local ttlMs = math.max(tonumber(ttl) or 5000, 0)
+    local stale = not entry
+        or not entry.updatedAt
+        or now() - entry.updatedAt >= ttlMs
+
+    if stale then
+        self.detailRequests[key] = {
+            deviceName = deviceName,
+            methodName = methodName,
+            ttl = ttlMs
+        }
+    end
+
+    return true, entry and entry.value or nil
+end
+
+function Cache:updateRequestedDetail()
+    local keys = {}
+
+    for key in pairs(self.detailRequests) do
+        keys[#keys + 1] = key
+    end
+
+    table.sort(keys)
+
+    local key = keys[1]
+    if not key then return false, nil, "No detail requested" end
+
+    local request = self.detailRequests[key]
+    self.detailRequests[key] = nil
+
+    local device = self.devices[request.deviceName]
+    local method = device and device[request.methodName]
+    local success, value
+    local err
+
+    if type(method) ~= "function" then
+        success = false
+        err = "Detail method unavailable: " .. request.methodName
+    else
+        success, value = pcall(method, device)
+        if not success then err = tostring(value) end
+    end
+
+    self.details[key] = {
+        value = success and value or (self.details[key] and self.details[key].value),
+        success = success,
+        error = err,
+        updatedAt = now(),
+        deviceName = request.deviceName,
+        methodName = request.methodName,
+        ttl = request.ttl
+    }
+
+    self.version = self.version + 1
+    self.lastUpdatedAt = now()
+
+    return success, key, self.details[key].value, err
 end
 
 function Cache:getVersion()
@@ -186,6 +265,10 @@ function Cache:updateNext()
         return false, nil, "Cache update already in progress"
     end
 
+    if next(self.detailRequests) then
+        return self:updateRequestedDetail()
+    end
+
     if #self.updateOrder == 0 then
         return false, nil, "No devices registered"
     end
@@ -215,6 +298,8 @@ function Cache:invalidate(name)
     else
         self.states = {}
         self.metadata = {}
+        self.details = {}
+        self.detailRequests = {}
         self.version = 0
         self.lastUpdatedAt = nil
     end
