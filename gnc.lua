@@ -26,6 +26,9 @@ local files = {
 	"api/fission.lua",
 	"core/monitor_manager.lua",
 	"core/navigation.lua",
+	"core/cache.lua",
+	"core/renderer.lua",
+	"core/controller.lua",
 
     --------------------------------------------------
     -- APIs

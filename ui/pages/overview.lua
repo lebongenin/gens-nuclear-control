@@ -765,13 +765,20 @@ function Overview.draw(context)
 
     local width, height = monitor.getSize()
 
-    local states = {
-        fusion = devices.fusion:getState(),
-        fission = devices.fission:getState(),
-        induction = devices.induction:getState(),
-        sps = devices.sps:getState(),
-        ae2 = devices.ae2:getState()
-    }
+    local states
+
+    if context.cache then
+        states = context.cache:getAll()
+    else
+        -- Backward compatibility for overview_dashboard.lua.
+        states = {
+            fusion = devices.fusion:getState(),
+            fission = devices.fission:getState(),
+            induction = devices.induction:getState(),
+            sps = devices.sps:getState(),
+            ae2 = devices.ae2:getState()
+        }
+    end
 
     Layout.clear(monitor)
 

@@ -1,7 +1,7 @@
 --================================================--
 -- GEN'S Nuclear Control
 -- Application : Control Center
--- Version : 0.1.0
+-- Version : 0.2.0
 --================================================--
 
 local MonitorManager =
@@ -9,6 +9,10 @@ local MonitorManager =
 
 local Navigation =
     dofile("/core/navigation.lua")
+
+local Cache = dofile("/core/cache.lua")
+local Renderer = dofile("/core/renderer.lua")
+local Controller = dofile("/core/controller.lua")
 
 local Layout =
     dofile("/ui/layout.lua")
@@ -35,7 +39,7 @@ local OverviewPage =
 -- Configuration
 --------------------------------------------------
 
-local VERSION = "0.1.0"
+local VERSION = "0.2.0"
 local REFRESH_RATE = 0.5
 local TEXT_SCALE = 0.5
 
@@ -161,6 +165,8 @@ local devices = {
     ae2 = AE2.new()
 }
 
+local cache = Cache.new(devices)
+
 --------------------------------------------------
 -- Navigation
 --------------------------------------------------
@@ -183,6 +189,7 @@ local context = {
     navigation = navigation,
 
     devices = devices,
+    cache = cache,
 
     application = {
         name = "GEN'S Nuclear Control",
@@ -623,75 +630,57 @@ end
 --------------------------------------------------
 
 local function main()
-    safeRender()
+    local renderer = Renderer.new({
+        manager = manager,
+        monitor = monitor,
+        context = context,
+        navigation = navigation,
+        pages = pages,
+        placeholder = drawPlaceholder,
+        errorRenderer = drawError
+    })
 
-    local refreshTimer =
-        os.startTimer(REFRESH_RATE)
+    local controller = Controller.new({
+        cache = cache,
+        renderer = renderer,
+        navigation = navigation,
+        manager = manager,
+        monitorName = monitorName,
+        pollInterval = REFRESH_RATE,
 
-    while true do
-        local event = {
-            os.pullEventRaw()
-        }
+        onResize = function(resizedMonitor)
+            local changed = handleMonitorResize(resizedMonitor)
 
-        local eventName = event[1]
-        local redraw = false
+            if changed then
+                renderer:setMonitor(monitor, monitorName)
+            end
 
-        if eventName == "monitor_touch" then
-            redraw = handleMonitorTouch(
-                event[2],
-                event[3],
-                event[4]
+            return changed
+        end,
+
+        onPeripheral = function(eventName, peripheralName)
+            local changed = manager:handlePeripheralEvent(
+                eventName,
+                peripheralName
             )
 
-        elseif eventName == "timer"
-            and event[2] == refreshTimer then
+            if changed then
+                local refreshedMonitor = manager:get(monitorName)
 
-            redraw = true
+                if refreshedMonitor then
+                    monitor = refreshedMonitor
+                    context.monitor = refreshedMonitor
+                    manager:setScale(monitorName, TEXT_SCALE)
+                    configureMonitor(monitor)
+                    renderer:setMonitor(monitor, monitorName)
+                end
+            end
 
-            refreshTimer =
-                os.startTimer(REFRESH_RATE)
-
-        elseif eventName == "monitor_resize" then
-            redraw = handleMonitorResize(
-                event[2]
-            )
-
-        elseif eventName == "peripheral"
-    or eventName == "peripheral_detach" then
-
-    local changed =
-        manager:handlePeripheralEvent(
-            eventName,
-            event[2]
-        )
-
-    if changed then
-        local refreshedMonitor =
-            manager:get(monitorName)
-
-        if refreshedMonitor then
-            monitor = refreshedMonitor
-            context.monitor = refreshedMonitor
-
-            manager:setScale(
-                monitorName,
-                TEXT_SCALE
-            )
-
-            configureMonitor(monitor)
+            return changed
         end
+    })
 
-        redraw = true
-    end
-
-        elseif eventName == "terminate" then
-            break
-        end
-
-        if redraw then
-            safeRender()
-        end
-    end
+    return controller:start()
 end
 
 --------------------------------------------------
