@@ -883,13 +883,19 @@ function Layout.panel(
     local previousText =
         term.getTextColor()
 
-    fill(
-        x,
-        y,
-        width,
-        height,
-        backgroundColor
-    )
+    -- Fill the complete panel background. The old call passed `height` as
+    -- fill's character argument, which wrote strings such as "121212..."
+    -- beyond the panel width and left stray digits at grid junctions.
+    term.setBackgroundColor(backgroundColor)
+
+    for row = y, y + height - 1 do
+        fill(
+            x,
+            row,
+            width,
+            " "
+        )
+    end
 
     term.setBackgroundColor(borderColor)
 
