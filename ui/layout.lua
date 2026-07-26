@@ -6,6 +6,17 @@
 
 local Layout = {}
 
+Layout.theme = {
+    title = colors.cyan,
+    safe = colors.lime,
+    warning = colors.yellow,
+    critical = colors.orange,
+    emergency = colors.red,
+    muted = colors.lightGray,
+    border = colors.gray,
+    panel = colors.black
+}
+
 --------------------------------------------------
 -- Color palette
 --------------------------------------------------
@@ -856,12 +867,10 @@ function Layout.panel(
 
     borderColor =
         borderColor
-        or Layout.theme.border
         or colors.gray
 
     backgroundColor =
         backgroundColor
-        or Layout.theme.panel
         or colors.black
 
     local previousBackground =
@@ -869,6 +878,73 @@ function Layout.panel(
 
     local previousText =
         term.getTextColor()
+
+    Layout.fill(
+        x,
+        y,
+        width,
+        height,
+        backgroundColor
+    )
+
+    term.setBackgroundColor(borderColor)
+
+    term.setCursorPos(x, y)
+    term.write(string.rep(" ", width))
+
+    term.setCursorPos(
+        x,
+        y + height - 1
+    )
+    term.write(string.rep(" ", width))
+
+    for row = y + 1, y + height - 2 do
+        term.setCursorPos(x, row)
+        term.write(" ")
+
+        term.setCursorPos(
+            x + width - 1,
+            row
+        )
+        term.write(" ")
+    end
+
+    if type(title) == "string"
+        and title ~= "" then
+
+        local titleText =
+            " " .. title .. " "
+
+        local maxTitleWidth =
+            math.max(width - 4, 1)
+
+        titleText =
+            Layout.truncate(
+                titleText,
+                maxTitleWidth
+            )
+
+        term.setBackgroundColor(borderColor)
+        term.setTextColor(colors.white)
+
+        term.setCursorPos(
+            x + 2,
+            y
+        )
+
+        term.write(titleText)
+    end
+
+    term.setBackgroundColor(
+        previousBackground
+    )
+
+    term.setTextColor(
+        previousText
+    )
+
+    return true
+end
 
     --------------------------------------------------
     -- Background
