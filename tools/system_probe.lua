@@ -301,6 +301,59 @@ for deviceName, definition in pairs(devices) do
 end
 
 --------------------------------------------------
+-- Sanitize tables before serialization
+--------------------------------------------------
+
+local function sanitize(value, seen, depth)
+    seen = seen or {}
+    depth = depth or 0
+
+    if depth > 8 then
+        return "<max depth reached>"
+    end
+
+    local valueType = type(value)
+
+    if valueType == "function" then
+        return "<function>"
+    end
+
+    if valueType == "userdata" then
+        return "<userdata>"
+    end
+
+    if valueType == "thread" then
+        return "<thread>"
+    end
+
+    if valueType ~= "table" then
+        return value
+    end
+
+    if seen[value] then
+        return "<repeated table reference>"
+    end
+
+    seen[value] = true
+
+    local clean = {}
+
+    for key, child in pairs(value) do
+        local cleanKey
+
+        if type(key) == "string" or type(key) == "number" then
+            cleanKey = key
+        else
+            cleanKey = tostring(key)
+        end
+
+        clean[cleanKey] = sanitize(child, seen, depth + 1)
+    end
+
+    return clean
+end
+
+--------------------------------------------------
 -- Write report
 --------------------------------------------------
 
@@ -312,8 +365,8 @@ if not file then
     error("Unable to create " .. OUTPUT_PATH)
 end
 
-file.write(textutils.serialize(report))
-file.close()
+local cleanReport = sanitize(report)
+file.write(textutils.serialize(cleanReport))
 
 print()
 term.setTextColor(colors.lime)
