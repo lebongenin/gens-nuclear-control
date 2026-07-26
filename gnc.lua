@@ -25,6 +25,7 @@ local files = {
 	"core/safe_call.lua",
 	"api/fission.lua",
 	"core/monitor_manager.lua",
+	"core/navigation.lua",
 
     --------------------------------------------------
     -- APIs
@@ -65,6 +66,7 @@ local files = {
 	"tools/tests/induction_test.lua",
 	"tools/tests/sps_test.lua",
 	"tools/tests/ae2_test.lua",
+	"tools/tests/navigation_test.lua",
 
     --------------------------------------------------
     -- Launcher
