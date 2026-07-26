@@ -29,6 +29,7 @@ local files = {
     -- APIs
     --------------------------------------------------
 	
+	"api/ae2.lua",
 	"api/fission.lua",
     "api/fusion.lua",
     "api/induction.lua",
