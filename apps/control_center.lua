@@ -39,6 +39,8 @@ local VERSION = "0.1.0"
 local REFRESH_RATE = 0.5
 local TEXT_SCALE = 0.5
 
+local previousTerminal = term.current()
+
 --------------------------------------------------
 -- Monitor setup
 --------------------------------------------------
@@ -463,6 +465,15 @@ local function safeRender()
     if not success then
         lastRenderError = tostring(result)
 
+        local currentTerminal =
+            term.current()
+
+        term.redirect(previousTerminal)
+        print("CONTROL CENTER RENDER ERROR:")
+        print(lastRenderError)
+
+        term.redirect(currentTerminal)
+
         manager:render(
             monitor,
             function()
@@ -626,7 +637,6 @@ end
 -- Application execution
 --------------------------------------------------
 
-local previousTerminal = term.current()
 
 local success, err = pcall(main)
 
