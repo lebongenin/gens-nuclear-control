@@ -44,6 +44,8 @@ local files = {
     "ui/colors.lua",
     "ui/widgets.lua",
 	"ui/layout.lua",
+	
+	"ui/pages/overview.lua",
 
     --------------------------------------------------
     -- Applications
@@ -51,6 +53,7 @@ local files = {
 
     "apps/fusion_dashboard.lua",
 	"apps/overview_dashboard.lua",
+	"apps/control_center.lua",
 
     --------------------------------------------------
     -- Development tools
