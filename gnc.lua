@@ -33,7 +33,7 @@ local files = {
     "apps/test_methods.lua",
     "apps/ui_test.lua",
 	"apps/induction_test.lua",
-	"apps/system_prob.lua",
+	"apps/system_probe.lua",
 	
     "gnc.lua"
 }
