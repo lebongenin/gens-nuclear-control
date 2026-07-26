@@ -4,6 +4,8 @@
 -- Version : 0.3.0
 --================================================--
 
+local Energy = dofile("/core/energy.lua")
+
 local SafeCall = dofile("/core/safe_call.lua")
 
 local Fusion = {}
@@ -322,12 +324,14 @@ function Fusion:getState()
             false
         ),
 
-        productionRate = readNumber(
-            device,
-            errors,
-            "getProductionRate",
-            0
-        ),
+		productionRate = Energy.joulesToFE(
+		readNumber(
+        device,
+        errors,
+        "getProductionRate",
+        0
+    )
+),
 
         injectionRate = readNumber(
             device,
@@ -350,19 +354,23 @@ function Fusion:getState()
             0
         ),
 
-        environmentalLoss = readNumber(
-            device,
-            errors,
-            "getEnvironmentalLoss",
-            0
-        ),
+		environmentalLoss = Energy.joulesToFE(
+			readNumber(
+			device,
+			errors,
+			"getEnvironmentalLoss",
+			0
+    )
+),
 
-        transferLoss = readNumber(
-            device,
-            errors,
-            "getTransferLoss",
-            0
-        ),
+		transferLoss = Energy.joulesToFE(
+			readNumber(
+			device,
+			errors,
+			"getTransferLoss",
+			0
+    )
+),
 
         dtFuel = dtFuel,
         deuterium = deuterium,

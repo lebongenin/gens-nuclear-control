@@ -4,6 +4,8 @@
 -- Version : 0.3.0
 --================================================--
 
+local Energy = dofile("/core/energy.lua")
+
 local SafeCall = dofile("/core/safe_call.lua")
 
 local Induction = {}
@@ -146,19 +148,23 @@ function Induction:getState()
 
     local device = self.device
 
-    local energy = readNumber(
+    local energy = Energy.joulesToFE(
+	readNumber(
         device,
         errors,
         "getEnergy",
         0
     )
+)
 
-    local capacity = readNumber(
+    local capacity = Energy.joulesToFE(
+    readNumber(
         device,
         errors,
         "getMaxEnergy",
         0
     )
+)
 
     local percentage, percentageError =
         SafeCall.getPercentage(
@@ -181,19 +187,23 @@ function Induction:getState()
         )
     end
 
-    local input = readNumber(
+    local input = Energy.joulesToFE(
+    readNumber(
         device,
         errors,
         "getLastInput",
         0
     )
+)
 
-    local output = readNumber(
+    local output = Energy.joulesToFE(
+    readNumber(
         device,
         errors,
         "getLastOutput",
         0
     )
+)
 
     local state = {
         connected = true,
@@ -209,12 +219,14 @@ function Induction:getState()
         energy = energy,
         capacity = capacity,
 
-        needed = readNumber(
-            device,
-            errors,
-            "getEnergyNeeded",
-            math.max(capacity - energy, 0)
-        ),
+        needed = Energy.joulesToFE(
+    readNumber(
+        device,
+        errors,
+        "getEnergyNeeded",
+        0
+    )
+),
 
         percentage = percentage,
 
@@ -222,12 +234,14 @@ function Induction:getState()
         output = output,
         netFlow = input - output,
 
-        transferCapacity = readNumber(
-            device,
-            errors,
-            "getTransferCap",
-            0
-        ),
+        transferCapacity = Energy.joulesToFE(
+    readNumber(
+        device,
+        errors,
+        "getTransferCap",
+        0
+    )
+),
 
         installedCells = readNumber(
             device,

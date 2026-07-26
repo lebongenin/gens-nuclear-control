@@ -4,6 +4,8 @@
 -- Version : 0.3.0
 --================================================--
 
+local Energy = dofile("/core/energy.lua")
+
 local SafeCall = dofile("/core/safe_call.lua")
 
 local SPS = {}
@@ -246,19 +248,23 @@ function SPS:getState()
         )
     )
 
-    local energy = readNumber(
+    local energy = Energy.joulesToFE(
+    readNumber(
         device,
         errors,
         "getEnergy",
         0
     )
+)
 
-    local capacity = readNumber(
+    local capacity = Energy.joulesToFE(
+    readNumber(
         device,
         errors,
         "getMaxEnergy",
         0
     )
+)
 
     local energyPercentage = readPercentage(
         device,
@@ -290,12 +296,14 @@ function SPS:getState()
         energy = energy,
         energyCapacity = capacity,
 
-        energyNeeded = readNumber(
-            device,
-            errors,
-            "getEnergyNeeded",
-            math.max(capacity - energy, 0)
-        ),
+        energyNeeded = Energy.joulesToFE(
+    readNumber(
+        device,
+        errors,
+        "getEnergyNeeded",
+        0
+    )
+),
 
         energyPercentage = energyPercentage,
 
