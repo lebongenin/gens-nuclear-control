@@ -14,27 +14,53 @@ local BASE_URL =
 --------------------------------------------------
 
 local files = {
+    --------------------------------------------------
+    -- Core
+    --------------------------------------------------
+
     "core/discovery.lua",
-    "core/logger.lua",
+    "core/energy.lua",
     "core/inspector.lua",
-	"core/energy.lua",
+    "core/logger.lua",
+
+    --------------------------------------------------
+    -- APIs
+    --------------------------------------------------
 
     "api/fusion.lua",
-	"api/induction.lua",
+    "api/induction.lua",
+
+    --------------------------------------------------
+    -- UI
+    --------------------------------------------------
 
     "ui/colors.lua",
     "ui/widgets.lua",
 
-    "apps/test.lua",
-    "apps/logger_test.lua",
-    "apps/fusion_test.lua",
-    "apps/inspector.lua",
+    --------------------------------------------------
+    -- Applications
+    --------------------------------------------------
+
     "apps/fusion_dashboard.lua",
-    "apps/test_methods.lua",
-    "apps/ui_test.lua",
-	"apps/induction_test.lua",
-	"apps/system_probe.lua",
-	
+
+    --------------------------------------------------
+    -- Development tools
+    --------------------------------------------------
+
+    "tools/inspector.lua",
+    "tools/system_probe.lua",
+
+    "tools/tests/general_test.lua",
+    "tools/tests/logger_test.lua",
+    "tools/tests/fusion_test.lua",
+    "tools/tests/induction_test.lua",
+    "tools/tests/methods_test.lua",
+    "tools/tests/ui_test.lua",
+
+    --------------------------------------------------
+    -- Launcher
+    --------------------------------------------------
+
     "gnc.lua"
 }
 
