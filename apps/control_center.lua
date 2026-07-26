@@ -35,6 +35,9 @@ local AE2 =
 local OverviewPage =
     dofile("/ui/pages/overview.lua")
 
+local FusionPage =
+    dofile("/ui/pages/fusion.lua")
+
 --------------------------------------------------
 -- Configuration
 --------------------------------------------------
@@ -452,6 +455,10 @@ end
 local pages = {
     overview = function()
         return OverviewPage.draw(context)
+    end,
+
+    fusion = function()
+        return FusionPage.draw(context)
     end
 
     -- Les pages détaillées seront ajoutées ici :

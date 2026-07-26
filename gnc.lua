@@ -49,6 +49,7 @@ local files = {
 	"ui/layout.lua",
 	
 	"ui/pages/overview.lua",
+	"ui/pages/fusion.lua",
 
     --------------------------------------------------
     -- Applications
