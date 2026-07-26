@@ -10,7 +10,7 @@ local MonitorManager =
 local Navigation =
     dofile("/core/navigation.lua")
 
-local Layout =
+local Pagelayout =
     dofile("/ui/layout.lua")
 
 local Fusion =
@@ -109,15 +109,11 @@ local function createLayoutAdapter(
 
             return function(...)
                 local arguments = table.pack(...)
-
                 local currentMonitor =
                     getCurrentMonitor()
 
-                -- overview.lua passes the monitor first,
-                -- while layout.lua works on term.current().
                 if arguments.n > 0
-                    and arguments[1]
-                        == currentMonitor then
+                    and arguments[1] == currentMonitor then
 
                     for index = 1,
                         arguments.n - 1 do
@@ -183,7 +179,7 @@ local context = {
     monitorName = monitorName,
 
     manager = manager,
-    layout = PageLayout,
+    layout = Pagelayout,
     navigation = navigation,
 
     devices = devices,
@@ -226,22 +222,47 @@ local function drawButton(
     text,
     backgroundColor
 )
-    Layout.fill(
-        monitor,
-        x,
-        y,
-        width,
-        1,
+    backgroundColor =
         backgroundColor or colors.gray
+
+    local previousBackground =
+        term.getBackgroundColor()
+
+    local previousText =
+        term.getTextColor()
+
+    term.setBackgroundColor(backgroundColor)
+    term.setTextColor(colors.white)
+
+    term.setCursorPos(x, y)
+    term.write(string.rep(" ", width))
+
+    local buttonText =
+        tostring(text or "")
+
+    if #buttonText > width then
+        buttonText =
+            string.sub(
+                buttonText,
+                1,
+                width
+            )
+    end
+
+    local textX =
+        x + math.floor(
+            (width - #buttonText) / 2
+        )
+
+    term.setCursorPos(textX, y)
+    term.write(buttonText)
+
+    term.setBackgroundColor(
+        previousBackground
     )
 
-    Layout.writeAt(
-        monitor,
-        x,
-        y,
-        Layout.centerText(text, width),
-        colors.white,
-        backgroundColor or colors.gray
+    term.setTextColor(
+        previousText
     )
 end
 
@@ -252,11 +273,12 @@ end
 local function drawPlaceholder(page)
     navigation:clearRegions(page)
 
-    local width, height = monitor.getSize()
+    local width, height =
+        monitor.getSize()
 
-    Layout.clear(monitor)
+    PageLayout.clear(monitor)
 
-    Layout.header(
+    PageLayout.header(
         monitor,
         "GEN'S NUCLEAR CONTROL",
         pageTitle(page)
@@ -266,8 +288,14 @@ local function drawPlaceholder(page)
     -- Back button
     --------------------------------------------------
 
-    local backWidth = math.min(12, width)
-    local backX = math.max(width - backWidth + 1, 1)
+    local backWidth =
+        math.min(12, width)
+
+    local backX =
+        math.max(
+            width - backWidth + 1,
+            1
+        )
 
     drawButton(
         backX,
@@ -294,21 +322,22 @@ local function drawPlaceholder(page)
     -- AE2 tabs
     --------------------------------------------------
 
-    local contentY = 4
+    local contentY = 5
 
     if Navigation.isAE2Page(page) then
-        local tabs = navigation:registerAE2Tabs(
-            2,
-            4,
-            math.max(width - 2, 5),
-            {
-                page = page,
-                monitorName = monitorName,
-                height = 2,
-                gap = 1,
-                priority = 50
-            }
-        )
+        local tabs =
+            navigation:registerAE2Tabs(
+                2,
+                5,
+                math.max(width - 2, 5),
+                {
+                    page = page,
+                    monitorName = monitorName,
+                    height = 1,
+                    gap = 1,
+                    priority = 50
+                }
+            )
 
         for _, tab in ipairs(tabs) do
             local selected =
@@ -334,10 +363,17 @@ local function drawPlaceholder(page)
 
     local panelX = 2
     local panelY = contentY
-    local panelWidth = math.max(width - 2, 1)
-    local panelHeight = math.max(height - panelY, 3)
 
-    Layout.panel(
+    local panelWidth =
+        math.max(width - 2, 2)
+
+    local panelHeight =
+        math.max(
+            height - panelY,
+            3
+        )
+
+    PageLayout.panel(
         monitor,
         panelX,
         panelY,
@@ -353,25 +389,49 @@ local function drawPlaceholder(page)
             1
         )
 
-    Layout.writeAt(
+    local firstMessage =
+        "DETAILED PAGE UNDER CONSTRUCTION"
+
+    local firstX =
+        panelX
+        + math.max(
+            math.floor(
+                (
+                    panelWidth
+                    - #firstMessage
+                ) / 2
+            ),
+            1
+        )
+
+    PageLayout.writeAt(
         monitor,
-        panelX + 1,
+        firstX,
         messageY,
-        Layout.centerText(
-            "DETAILED PAGE UNDER CONSTRUCTION",
-            math.max(panelWidth - 2, 1)
-        ),
+        firstMessage,
         Layout.theme.warning
     )
 
-    Layout.writeAt(
+    local secondMessage =
+        "Touch < BACK to return"
+
+    local secondX =
+        panelX
+        + math.max(
+            math.floor(
+                (
+                    panelWidth
+                    - #secondMessage
+                ) / 2
+            ),
+            1
+        )
+
+    PageLayout.writeAt(
         monitor,
-        panelX + 1,
+        secondX,
         messageY + 2,
-        Layout.centerText(
-            "Touch < BACK to return",
-            math.max(panelWidth - 2, 1)
-        ),
+        secondMessage,
         Layout.theme.muted
     )
 end
@@ -401,43 +461,44 @@ local lastRenderError = nil
 local function drawError(err)
     navigation:clearRegions()
 
-    local width, height = monitor.getSize()
+    local width, height =
+        monitor.getSize()
 
-    Layout.clear(monitor)
+    PagePagelayout.clear(monitor)
 
-    Layout.header(
+    PagePagelayout.header(
         monitor,
         "GEN'S NUCLEAR CONTROL",
         "CONTROL CENTER ERROR"
     )
 
-    Layout.panel(
+    PagePagelayout.panel(
         monitor,
         2,
-        4,
-        math.max(width - 2, 1),
-        math.max(height - 5, 3),
+        5,
+        math.max(width - 2, 2),
+        math.max(height - 6, 3),
         "ERROR",
-        Layout.theme.emergency
+        colors.red
     )
 
-    Layout.writeAt(
+    PagePagelayout.writeAt(
         monitor,
         4,
-        6,
-        Layout.truncate(
+        7,
+        PagePagelayout.truncate(
             tostring(err),
             math.max(width - 6, 1)
         ),
-        Layout.theme.emergency
+        colors.red
     )
 
-    Layout.writeAt(
+    PagePagelayout.writeAt(
         monitor,
         4,
-        8,
+        9,
         "Automatic retry in progress...",
-        Layout.theme.muted
+        colors.lightGray
     )
 end
 
