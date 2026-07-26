@@ -1,69 +1,166 @@
 --================================================--
 -- GEN'S Nuclear Control
--- Version : 0.2.0
--- Module  : Fusion Reactor API
+-- API Module : Fusion Reactor
+-- Version : 0.3.0
 --================================================--
 
-local discovery = dofile("/core/discovery.lua")
-local logger = dofile("/core/logger.lua")
-local energy = dofile("/core/energy.lua")
+local SafeCall = dofile("/core/safe_call.lua")
 
 local Fusion = {}
 Fusion.__index = Fusion
 
+local PERIPHERAL_TYPE = "fusionReactorLogicAdapter"
+
 --------------------------------------------------
--- Safe peripheral call
+-- Reading helpers
 --------------------------------------------------
 
-local function safeCall(peripheralObject, methodName, ...)
-    if not peripheralObject then
-        return nil, "Peripheral unavailable"
-    end
+local function readNumber(device, errors, method, fallback, ...)
+    local value, err = SafeCall.getNumber(
+        device,
+        method,
+        fallback,
+        ...
+    )
 
-    local method = peripheralObject[methodName]
+    SafeCall.addError(errors, method, err)
 
-    if type(method) ~= "function" then
-        return nil, "Unsupported method: " .. tostring(methodName)
-    end
-
-    local result = table.pack(pcall(method, ...))
-
-    if not result[1] then
-        return nil, tostring(result[2])
-    end
-
-    return table.unpack(result, 2, result.n)
+    return value
 end
 
---------------------------------------------------
--- Mekanism energy conversion
---------------------------------------------------
+local function readBoolean(device, errors, method, fallback, ...)
+    local value, err = SafeCall.getBoolean(
+        device,
+        method,
+        fallback,
+        ...
+    )
 
-local function joulesToFE(value)
-    value = tonumber(value)
+    SafeCall.addError(errors, method, err)
 
-    if not value then
-        return nil
-    end
-
-    return value / 2.5
+    return value
 end
 
---------------------------------------------------
--- Normalize Mekanism chemical tables
---------------------------------------------------
+local function readPercentage(device, errors, method, fallback, ...)
+    local value, err = SafeCall.getPercentage(
+        device,
+        method,
+        fallback,
+        ...
+    )
 
-local function normalizeChemical(value)
-    if type(value) ~= "table" then
-        return {
-            amount = 0,
-            chemical = "mekanism:empty"
-        }
+    SafeCall.addError(errors, method, err)
+
+    return value
+end
+
+local function readResource(device, errors, method, ...)
+    local value, err = SafeCall.getResource(
+        device,
+        method,
+        ...
+    )
+
+    SafeCall.addError(errors, method, err)
+
+    return value
+end
+
+local function buildTank(resource, capacity, needed, percentage)
+    resource = SafeCall.normalizeResource(resource)
+
+    capacity = SafeCall.number(capacity, 0)
+    needed = SafeCall.number(
+        needed,
+        math.max(capacity - resource.amount, 0)
+    )
+
+    if percentage == nil then
+        percentage = SafeCall.calculatePercentage(
+            resource.amount,
+            capacity,
+            0
+        )
     end
 
     return {
-        amount = tonumber(value.amount) or 0,
-        chemical = value.name or "mekanism:empty"
+        name = resource.name,
+        amount = resource.amount,
+        capacity = capacity,
+        needed = needed,
+        percentage = percentage
+    }
+end
+
+--------------------------------------------------
+-- Safety
+--------------------------------------------------
+
+local function evaluateSafety(state)
+    local level = "safe"
+    local warnings = {}
+
+    local priorities = {
+        safe = 1,
+        warning = 2,
+        critical = 3,
+        emergency = 4
+    }
+
+    local function raise(newLevel, message)
+        warnings[#warnings + 1] = message
+
+        if priorities[newLevel] > priorities[level] then
+            level = newLevel
+        end
+    end
+
+    if not state.connected then
+        raise("emergency", "Fusion reactor disconnected")
+
+        return {
+            level = level,
+            safe = false,
+            warnings = warnings
+        }
+    end
+
+    if not state.formed then
+        raise("critical", "Fusion reactor is not formed")
+    end
+
+    if state.formed and not state.ignited then
+        raise("warning", "Fusion reactor is not ignited")
+    end
+
+    if state.ignited then
+        if state.dtFuel.percentage <= 0.05 then
+            raise("critical", "D-T fuel buffer nearly empty")
+        elseif state.dtFuel.percentage <= 0.25 then
+            raise("warning", "D-T fuel buffer is low")
+        end
+
+        if state.productionRate <= 0 then
+            raise("critical", "Ignited reactor produces no energy")
+        end
+    end
+
+    if state.activeCooled then
+        if state.water.percentage ~= nil
+            and state.water.percentage <= 0.10 then
+            raise("critical", "Fusion coolant water is low")
+        end
+
+        if state.steam.percentage ~= nil
+            and state.steam.percentage >= 0.95 then
+            raise("critical", "Fusion steam tank nearly full")
+        end
+    end
+
+    return {
+        level = level,
+        safe = level == "safe",
+        warnings = warnings
     }
 end
 
@@ -71,277 +168,286 @@ end
 -- Constructor
 --------------------------------------------------
 
-function Fusion.new()
-    local peripheralObject, name, deviceType =
-        discovery.getFusionReactor()
-
+function Fusion.new(peripheralName)
     local self = setmetatable({}, Fusion)
 
-    self.peripheral = peripheralObject
-    self.name = name
-    self.type = deviceType
+    self.peripheralName = peripheralName
+    self.device = nil
 
-    if self.peripheral then
-        logger.info(
-            "Fusion API connected to "
-                .. tostring(self.name)
-        )
-    else
-        logger.warning(
-            "Fusion API could not find a reactor"
-        )
-    end
+    self:refreshPeripheral()
 
     return self
 end
 
 --------------------------------------------------
--- Connection
+-- Peripheral
 --------------------------------------------------
+
+function Fusion:refreshPeripheral()
+    if self.peripheralName then
+        if peripheral.isPresent(self.peripheralName) then
+            self.device = peripheral.wrap(self.peripheralName)
+        else
+            self.device = nil
+        end
+    else
+        self.device = peripheral.find(PERIPHERAL_TYPE)
+    end
+
+    return self.device ~= nil
+end
 
 function Fusion:isConnected()
-    return self.peripheral ~= nil
+    return self:refreshPeripheral()
 end
 
--- Kept for compatibility with older code.
-function Fusion:isOnline()
-    return self:isConnected()
-end
-
-function Fusion:reconnect()
-    local peripheralObject, name, deviceType =
-        discovery.getFusionReactor()
-
-    self.peripheral = peripheralObject
-    self.name = name
-    self.type = deviceType
-
-    return self:isConnected()
-end
-
-function Fusion:getName()
-    return self.name
-end
-
-function Fusion:getType()
-    return self.type
+function Fusion:getPeripheral()
+    return self.device
 end
 
 --------------------------------------------------
--- Reactor state
+-- State
 --------------------------------------------------
 
-function Fusion:isFormed()
-    return safeCall(self.peripheral, "isFormed")
-end
+function Fusion:getState()
+    self:refreshPeripheral()
 
-function Fusion:isIgnited()
-    return safeCall(self.peripheral, "isIgnited")
-end
+    local errors = {}
 
-function Fusion:getInjectionRate()
-    return safeCall(
-        self.peripheral,
-        "getInjectionRate"
-    )
-end
-
-function Fusion:setInjectionRate(rate)
-    if type(rate) ~= "number" then
-        return false, "Injection rate must be a number"
-    end
-
-    local result, errorMessage =
-        safeCall(
-            self.peripheral,
-            "setInjectionRate",
-            rate
-        )
-
-    if result == nil and errorMessage then
-        logger.error(
-            "Unable to set injection rate: "
-                .. tostring(errorMessage)
-        )
-
-        return false, errorMessage
-    end
-
-    logger.info(
-        "Injection rate changed to "
-            .. tostring(rate)
-    )
-
-    return true
-end
-
---------------------------------------------------
--- Temperatures
---------------------------------------------------
-
-function Fusion:getCaseTemperature()
-    return safeCall(
-        self.peripheral,
-        "getCaseTemperature"
-    )
-end
-
-function Fusion:getPlasmaTemperature()
-    return safeCall(
-        self.peripheral,
-        "getPlasmaTemperature"
-    )
-end
-
---------------------------------------------------
--- Fuel
---------------------------------------------------
-
-function Fusion:getDTFuel()
-    local value, errorMessage =
-        safeCall(self.peripheral, "getDTFuel")
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return normalizeChemical(value)
-end
-
-function Fusion:getTritium()
-    local value, errorMessage =
-        safeCall(self.peripheral, "getTritium")
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return normalizeChemical(value)
-end
-
-function Fusion:getDeuterium()
-    local value, errorMessage =
-        safeCall(self.peripheral, "getDeuterium")
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return normalizeChemical(value)
-end
-
---------------------------------------------------
--- Logic and losses
---------------------------------------------------
-
-function Fusion:getLogicMode()
-    return safeCall(
-        self.peripheral,
-        "getLogicMode"
-    )
-end
-
-function Fusion:getEnvironmentalLoss()
-    local value, errorMessage = safeCall(
-        self.peripheral,
-        "getEnvironmentalLoss"
-    )
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return energy.joulesToFE(value)
-end
-
-function Fusion:getTransferLoss()
-    local value, errorMessage = safeCall(
-        self.peripheral,
-        "getTransferLoss"
-    )
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return energy.joulesToFE(value)
-end
-
---------------------------------------------------
--- Energy production
---------------------------------------------------
-
-function Fusion:getProduction()
-    local value, errorMessage = safeCall(
-        self.peripheral,
-        "getProductionRate"
-    )
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return energy.joulesToFE(value)
-end
---------------------------------------------------
--- Complete dashboard status
---------------------------------------------------
-
-function Fusion:getStatus()
-    if not self:isConnected() then
-        return {
+    if not self.device then
+        local state = {
             connected = false,
-            online = false,
+            peripheralType = PERIPHERAL_TYPE,
             formed = false,
             ignited = false,
-            name = self.name,
-            type = self.type,
-            error = "Fusion Reactor unavailable"
+            activeCooled = false,
+            errors = {
+                {
+                    method = "discovery",
+                    message = "Fusion reactor unavailable"
+                }
+            },
+            hasErrors = true
+        }
+
+        state.safety = evaluateSafety(state)
+
+        return state
+    end
+
+    local device = self.device
+
+    local dtFuel = buildTank(
+        readResource(device, errors, "getDTFuel"),
+        readNumber(device, errors, "getDTFuelCapacity", 0),
+        readNumber(device, errors, "getDTFuelNeeded", 0),
+        readPercentage(
+            device,
+            errors,
+            "getDTFuelFilledPercentage",
+            0
+        )
+    )
+
+    local deuterium = buildTank(
+        readResource(device, errors, "getDeuterium"),
+        readNumber(device, errors, "getDeuteriumCapacity", 0),
+        readNumber(device, errors, "getDeuteriumNeeded", 0),
+        readPercentage(
+            device,
+            errors,
+            "getDeuteriumFilledPercentage",
+            0
+        )
+    )
+
+    local tritium = buildTank(
+        readResource(device, errors, "getTritium"),
+        readNumber(device, errors, "getTritiumCapacity", 0),
+        readNumber(device, errors, "getTritiumNeeded", 0),
+        readPercentage(
+            device,
+            errors,
+            "getTritiumFilledPercentage",
+            0
+        )
+    )
+
+    local water = buildTank(
+        readResource(device, errors, "getWater"),
+        readNumber(device, errors, "getWaterCapacity", 0),
+        readNumber(device, errors, "getWaterNeeded", 0),
+        readPercentage(
+            device,
+            errors,
+            "getWaterFilledPercentage",
+            nil
+        )
+    )
+
+    local steam = buildTank(
+        readResource(device, errors, "getSteam"),
+        readNumber(device, errors, "getSteamCapacity", 0),
+        readNumber(device, errors, "getSteamNeeded", 0),
+        readPercentage(
+            device,
+            errors,
+            "getSteamFilledPercentage",
+            nil
+        )
+    )
+
+    local state = {
+        connected = true,
+        peripheralType = PERIPHERAL_TYPE,
+
+        formed = readBoolean(
+            device,
+            errors,
+            "isFormed",
+            false
+        ),
+
+        ignited = readBoolean(
+            device,
+            errors,
+            "isIgnited",
+            false
+        ),
+
+        activeCooled = readBoolean(
+            device,
+            errors,
+            "isActiveCooledLogic",
+            false
+        ),
+
+        productionRate = readNumber(
+            device,
+            errors,
+            "getProductionRate",
+            0
+        ),
+
+        injectionRate = readNumber(
+            device,
+            errors,
+            "getInjectionRate",
+            0
+        ),
+
+        plasmaTemperature = readNumber(
+            device,
+            errors,
+            "getPlasmaTemperature",
+            0
+        ),
+
+        caseTemperature = readNumber(
+            device,
+            errors,
+            "getCaseTemperature",
+            0
+        ),
+
+        environmentalLoss = readNumber(
+            device,
+            errors,
+            "getEnvironmentalLoss",
+            0
+        ),
+
+        transferLoss = readNumber(
+            device,
+            errors,
+            "getTransferLoss",
+            0
+        ),
+
+        dtFuel = dtFuel,
+        deuterium = deuterium,
+        tritium = tritium,
+        water = water,
+        steam = steam,
+
+        errors = errors
+    }
+
+    state.netProduction =
+        math.max(
+            state.productionRate
+            - state.environmentalLoss
+            - state.transferLoss,
+            0
+        )
+
+    state.hasErrors = #errors > 0
+    state.safety = evaluateSafety(state)
+
+    return state
+end
+
+function Fusion:read()
+    return self:getState()
+end
+
+function Fusion:update()
+    return self:getState()
+end
+
+--------------------------------------------------
+-- Controls
+--------------------------------------------------
+
+function Fusion:setInjectionRate(rate)
+    if not SafeCall.isFiniteNumber(rate) or rate < 0 then
+        return {
+            success = false,
+            action = "setInjectionRate",
+            error = "Invalid injection rate"
         }
     end
 
-    local formed = self:isFormed()
-    local ignited = self:isIgnited()
+    self:refreshPeripheral()
+
+    local success, value, err = SafeCall.raw(
+        self.device,
+        "setInjectionRate",
+        rate
+    )
 
     return {
-        connected = true,
+        success = success,
+        value = value,
+        error = err,
+        action = "setInjectionRate",
+        requestedRate = rate
+    }
+end
 
-        -- For the dashboard, ONLINE means ignited.
-        online = ignited == true,
+function Fusion:setActiveCooled(enabled)
+    if type(enabled) ~= "boolean" then
+        return {
+            success = false,
+            action = "setActiveCooledLogic",
+            error = "Expected a boolean"
+        }
+    end
 
-        name = self:getName(),
-        type = self:getType(),
+    self:refreshPeripheral()
 
-        formed = formed == true,
-        ignited = ignited == true,
+    local success, value, err = SafeCall.raw(
+        self.device,
+        "setActiveCooledLogic",
+        enabled
+    )
 
-        injectionRate = self:getInjectionRate(),
-		
-		production = self:getProduction(),
-
-        caseTemperature =
-            self:getCaseTemperature(),
-
-        plasmaTemperature =
-            self:getPlasmaTemperature(),
-
-        logicMode =
-            self:getLogicMode(),
-
-        environmentalLoss =
-            self:getEnvironmentalLoss(),
-
-        transferLoss =
-            self:getTransferLoss(),
-
-        dtFuel =
-            self:getDTFuel(),
-
-        tritium =
-            self:getTritium(),
-
-        deuterium =
-            self:getDeuterium()
+    return {
+        success = success,
+        value = value,
+        error = err,
+        action = "setActiveCooledLogic",
+        enabled = enabled
     }
 end
 

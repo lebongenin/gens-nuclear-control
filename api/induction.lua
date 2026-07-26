@@ -1,341 +1,281 @@
 --================================================--
 -- GEN'S Nuclear Control
--- Version : 0.2.0
--- Module  : Induction Matrix API
+-- API Module : Induction Matrix
+-- Version : 0.3.0
 --================================================--
 
-local discovery = dofile("/core/discovery.lua")
-local logger = dofile("/core/logger.lua")
-local energy = dofile("/core/energy.lua")
+local SafeCall = dofile("/core/safe_call.lua")
 
 local Induction = {}
 Induction.__index = Induction
 
+local PERIPHERAL_TYPE = "inductionPort"
+
 --------------------------------------------------
--- Safe peripheral call
+-- Helpers
 --------------------------------------------------
 
-local function safeCall(peripheralObject, methodName, ...)
-    if not peripheralObject then
-        return nil, "Peripheral unavailable"
-    end
-
-    local method = peripheralObject[methodName]
-
-    if type(method) ~= "function" then
-        return nil,
-            "Unsupported method: "
-            .. tostring(methodName)
-    end
-
-    local result = table.pack(
-        pcall(method, ...)
+local function readNumber(device, errors, method, fallback)
+    local value, err = SafeCall.getNumber(
+        device,
+        method,
+        fallback
     )
 
-    if not result[1] then
-        return nil, tostring(result[2])
+    SafeCall.addError(errors, method, err)
+
+    return value
+end
+
+local function readBoolean(device, errors, method, fallback)
+    local value, err = SafeCall.getBoolean(
+        device,
+        method,
+        fallback
+    )
+
+    SafeCall.addError(errors, method, err)
+
+    return value
+end
+
+local function evaluateSafety(state)
+    local level = "safe"
+    local warnings = {}
+
+    if not state.connected then
+        level = "emergency"
+        warnings[#warnings + 1] =
+            "Induction Matrix disconnected"
+    elseif not state.formed then
+        level = "critical"
+        warnings[#warnings + 1] =
+            "Induction Matrix is not formed"
+    elseif state.percentage <= 0.05 then
+        level = "critical"
+        warnings[#warnings + 1] =
+            "Energy storage nearly empty"
+    elseif state.percentage <= 0.20 then
+        level = "warning"
+        warnings[#warnings + 1] =
+            "Energy storage is low"
+    elseif state.percentage >= 0.98
+        and state.netFlow > 0 then
+        level = "warning"
+        warnings[#warnings + 1] =
+            "Energy storage almost full"
     end
 
-    return table.unpack(
-        result,
-        2,
-        result.n
-    )
+    return {
+        level = level,
+        safe = level == "safe",
+        warnings = warnings
+    }
 end
 
 --------------------------------------------------
 -- Constructor
 --------------------------------------------------
 
-function Induction.new()
-    local peripheralObject, name, deviceType =
-        discovery.getInductionMatrix()
-
+function Induction.new(peripheralName)
     local self = setmetatable({}, Induction)
 
-    self.peripheral = peripheralObject
-    self.name = name
-    self.type = deviceType
+    self.peripheralName = peripheralName
+    self.device = nil
 
-    if self.peripheral then
-        logger.info(
-            "Induction API connected to "
-                .. tostring(self.name)
-        )
-    else
-        logger.warning(
-            "Induction API could not find a matrix"
-        )
-    end
+    self:refreshPeripheral()
 
     return self
 end
 
 --------------------------------------------------
--- Connection
+-- Peripheral
 --------------------------------------------------
+
+function Induction:refreshPeripheral()
+    if self.peripheralName then
+        if peripheral.isPresent(self.peripheralName) then
+            self.device = peripheral.wrap(self.peripheralName)
+        else
+            self.device = nil
+        end
+    else
+        self.device = peripheral.find(PERIPHERAL_TYPE)
+    end
+
+    return self.device ~= nil
+end
 
 function Induction:isConnected()
-    return self.peripheral ~= nil
+    return self:refreshPeripheral()
 end
 
-function Induction:isOnline()
-    return self:isConnected()
-end
-
-function Induction:reconnect()
-    local peripheralObject, name, deviceType =
-        discovery.getInductionMatrix()
-
-    self.peripheral = peripheralObject
-    self.name = name
-    self.type = deviceType
-
-    return self:isConnected()
-end
-
-function Induction:getName()
-    return self.name
-end
-
-function Induction:getType()
-    return self.type
+function Induction:getPeripheral()
+    return self.device
 end
 
 --------------------------------------------------
--- Energy storage
+-- State
 --------------------------------------------------
 
-function Induction:getEnergy()
-    local value, errorMessage = safeCall(
-        self.peripheral,
-        "getEnergy"
-    )
+function Induction:getState()
+    self:refreshPeripheral()
 
-    if value == nil then
-        return nil, errorMessage
-    end
+    local errors = {}
 
-    return energy.joulesToFE(value)
-end
-
-function Induction:getMaxEnergy()
-    local value, errorMessage = safeCall(
-        self.peripheral,
-        "getMaxEnergy"
-    )
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return energy.joulesToFE(value)
-end
-
-function Induction:getEnergyNeeded()
-    local value, errorMessage = safeCall(
-        self.peripheral,
-        "getEnergyNeeded"
-    )
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return energy.joulesToFE(value)
-end
-
-function Induction:getFilledPercentage()
-    return safeCall(
-        self.peripheral,
-        "getEnergyFilledPercentage"
-    )
-end
-
-function Induction:getInput()
-    local value, errorMessage = safeCall(
-        self.peripheral,
-        "getLastInput"
-    )
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return energy.joulesToFE(value)
-end
-
-function Induction:getOutput()
-    local value, errorMessage = safeCall(
-        self.peripheral,
-        "getLastOutput"
-    )
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return energy.joulesToFE(value)
-end
-
-function Induction:getTransferCapacity()
-    local value, errorMessage = safeCall(
-        self.peripheral,
-        "getTransferCap"
-    )
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return energy.joulesToFE(value)
-end
-
---------------------------------------------------
--- Energy transfer
---------------------------------------------------
-
-function Induction:getInput()
-    local value, errorMessage = safeCall(
-        self.peripheral,
-        "getLastInput"
-    )
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return energy.joulesToFE(value)
-end
-
-function Induction:getOutput()
-    local value, errorMessage = safeCall(
-        self.peripheral,
-        "getLastOutput"
-    )
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return energy.joulesToFE(value)
-end
-
-function Induction:getTransferCapacity()
-    local value, errorMessage = safeCall(
-        self.peripheral,
-        "getTransferCap"
-    )
-
-    if value == nil then
-        return nil, errorMessage
-    end
-
-    return energy.joulesToFE(value)
-end
-
---------------------------------------------------
--- Components
---------------------------------------------------
-
-function Induction:getInstalledCells()
-    return safeCall(
-        self.peripheral,
-        "getInstalledCells"
-    )
-end
-
-function Induction:getInstalledProviders()
-    return safeCall(
-        self.peripheral,
-        "getInstalledProviders"
-    )
-end
-
---------------------------------------------------
--- Complete matrix status
---------------------------------------------------
-
-function Induction:getStatus()
-    if not self:isConnected() then
-        return {
+    if not self.device then
+        local state = {
             connected = false,
-            online = false,
-
-            name = self.name,
-            type = self.type,
-
-            energy = nil,
-            capacity = nil,
-            needed = nil,
-            percentage = nil,
-
-            input = nil,
-            output = nil,
-            netFlow = nil,
-
-            error = "Induction Matrix unavailable"
+            peripheralType = PERIPHERAL_TYPE,
+            formed = false,
+            errors = {
+                {
+                    method = "discovery",
+                    message = "Induction Matrix unavailable"
+                }
+            },
+            hasErrors = true,
+            percentage = 0,
+            netFlow = 0
         }
+
+        state.safety = evaluateSafety(state)
+
+        return state
     end
 
-    local energy = self:getEnergy()
-    local capacity = self:getMaxEnergy()
+    local device = self.device
 
-    local input = self:getInput()
-    local output = self:getOutput()
+    local energy = readNumber(
+        device,
+        errors,
+        "getEnergy",
+        0
+    )
 
-    local percentage =
-        self:getFilledPercentage()
+    local capacity = readNumber(
+        device,
+        errors,
+        "getMaxEnergy",
+        0
+    )
 
-    -- Fallback if the percentage method fails.
-    if percentage == nil
-        and type(energy) == "number"
-        and type(capacity) == "number"
-        and capacity > 0 then
+    local percentage, percentageError =
+        SafeCall.getPercentage(
+            device,
+            "getEnergyFilledPercentage",
+            nil
+        )
 
-        percentage = energy / capacity
+    SafeCall.addError(
+        errors,
+        "getEnergyFilledPercentage",
+        percentageError
+    )
+
+    if percentage == nil then
+        percentage = SafeCall.calculatePercentage(
+            energy,
+            capacity,
+            0
+        )
     end
 
-    local netFlow = nil
+    local input = readNumber(
+        device,
+        errors,
+        "getLastInput",
+        0
+    )
 
-    if type(input) == "number"
-        and type(output) == "number" then
+    local output = readNumber(
+        device,
+        errors,
+        "getLastOutput",
+        0
+    )
 
-        netFlow = input - output
-    end
-
-    return {
+    local state = {
         connected = true,
-        online = true,
+        peripheralType = PERIPHERAL_TYPE,
 
-        name = self:getName(),
-        type = self:getType(),
+        formed = readBoolean(
+            device,
+            errors,
+            "isFormed",
+            false
+        ),
 
         energy = energy,
         capacity = capacity,
 
-        needed =
-            self:getEnergyNeeded(),
+        needed = readNumber(
+            device,
+            errors,
+            "getEnergyNeeded",
+            math.max(capacity - energy, 0)
+        ),
 
         percentage = percentage,
 
-        -- Already returned in FE/t.
         input = input,
         output = output,
+        netFlow = input - output,
 
-        -- Positive means charging.
-        -- Negative means discharging.
-        netFlow = netFlow,
+        transferCapacity = readNumber(
+            device,
+            errors,
+            "getTransferCap",
+            0
+        ),
 
-        transferCapacity =
-            self:getTransferCapacity(),
+        installedCells = readNumber(
+            device,
+            errors,
+            "getInstalledCells",
+            0
+        ),
 
-        installedCells =
-            self:getInstalledCells(),
+        installedProviders = readNumber(
+            device,
+            errors,
+            "getInstalledProviders",
+            0
+        ),
 
-        installedProviders =
-            self:getInstalledProviders()
+        errors = errors
     }
+
+    state.inputUtilization =
+        SafeCall.calculatePercentage(
+            state.input,
+            state.transferCapacity,
+            0
+        )
+
+    state.outputUtilization =
+        SafeCall.calculatePercentage(
+            state.output,
+            state.transferCapacity,
+            0
+        )
+
+    state.charging = state.netFlow > 0
+    state.discharging = state.netFlow < 0
+    state.stable = state.netFlow == 0
+
+    state.hasErrors = #errors > 0
+    state.safety = evaluateSafety(state)
+
+    return state
+end
+
+function Induction:read()
+    return self:getState()
+end
+
+function Induction:update()
+    return self:getState()
 end
 
 return Induction
