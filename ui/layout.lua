@@ -934,8 +934,19 @@ function Layout.panel(
                 maxTitleWidth
             )
 
+        local titleTextColor = colors.white
+
+        if borderColor == colors.cyan
+            or borderColor == colors.yellow
+            or borderColor == colors.orange
+            or borderColor == colors.lime
+            or borderColor == colors.lightGray
+            or borderColor == colors.white then
+            titleTextColor = colors.black
+        end
+
         term.setBackgroundColor(borderColor)
-        term.setTextColor(colors.white)
+        term.setTextColor(titleTextColor)
 
         term.setCursorPos(
             x + 2,

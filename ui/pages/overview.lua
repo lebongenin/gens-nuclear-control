@@ -6,6 +6,15 @@
 
 local Overview = {}
 
+local SYSTEM_COLORS = {
+    fusion = colors.cyan,
+    fission = colors.orange,
+    induction = colors.yellow,
+    sps = colors.magenta,
+    ae2 = colors.purple,
+    system = colors.lightGray
+}
+
 --------------------------------------------------
 -- Helpers
 --------------------------------------------------
@@ -46,14 +55,15 @@ local function drawSystemHeader(
     width,
     title,
     status,
-    level
+    level,
+    titleColor
 )
     Layout.writeAt(
         monitor,
         x,
         y,
         Layout.truncate(title, math.max(width - 12, 1)),
-        Layout.theme.title
+        titleColor or Layout.theme.title
     )
 
     local badge = " " .. status .. " "
@@ -102,7 +112,8 @@ local function drawFusion(
         cell.y,
         cell.width,
         cell.height,
-        "FUSION"
+        "FUSION",
+        SYSTEM_COLORS.fusion
     )
 
     local innerX = cell.x + 2
@@ -117,7 +128,8 @@ local function drawFusion(
         innerWidth,
         "Fusion Reactor",
         getStatusText(state, "ignited"),
-        getSafetyLevel(state)
+        getSafetyLevel(state),
+        SYSTEM_COLORS.fusion
     )
 
     if not state or not state.connected then
@@ -194,7 +206,8 @@ local function drawFission(
         cell.y,
         cell.width,
         cell.height,
-        "FISSION"
+        "FISSION",
+        SYSTEM_COLORS.fission
     )
 
     local innerX = cell.x + 2
@@ -209,7 +222,8 @@ local function drawFission(
         innerWidth,
         "Fission Reactor",
         getStatusText(state, "active"),
-        getSafetyLevel(state)
+        getSafetyLevel(state),
+        SYSTEM_COLORS.fission
     )
 
     if not state or not state.connected then
@@ -309,7 +323,8 @@ local function drawInduction(
         cell.y,
         cell.width,
         cell.height,
-        "INDUCTION"
+        "INDUCTION",
+        SYSTEM_COLORS.induction
     )
 
     local innerX = cell.x + 2
@@ -324,7 +339,8 @@ local function drawInduction(
         innerWidth,
         "Induction Matrix",
         getStatusText(state),
-        getSafetyLevel(state)
+        getSafetyLevel(state),
+        SYSTEM_COLORS.induction
     )
 
     if not state or not state.connected then
@@ -414,7 +430,8 @@ local function drawSPS(
         cell.y,
         cell.width,
         cell.height,
-        "SPS"
+        "SPS",
+        SYSTEM_COLORS.sps
     )
 
     local innerX = cell.x + 2
@@ -429,7 +446,8 @@ local function drawSPS(
         innerWidth,
         "Antimatter",
         getStatusText(state),
-        getSafetyLevel(state)
+        getSafetyLevel(state),
+        SYSTEM_COLORS.sps
     )
 
     if not state or not state.connected then
@@ -514,7 +532,8 @@ local function drawAE2(
         cell.y,
         cell.width,
         cell.height,
-        "AE2"
+        "AE2",
+        SYSTEM_COLORS.ae2
     )
 
     local innerX = cell.x + 2
@@ -538,7 +557,8 @@ local function drawAE2(
         innerWidth,
         state and state.name or "ME Network",
         status,
-        getSafetyLevel(state)
+        getSafetyLevel(state),
+        SYSTEM_COLORS.ae2
     )
 
     if not state or not state.connected then
@@ -631,7 +651,8 @@ local function drawSystem(
         cell.y,
         cell.width,
         cell.height,
-        "SYSTEM"
+        "SYSTEM",
+        SYSTEM_COLORS.system
     )
 
     local innerX = cell.x + 2
@@ -681,7 +702,8 @@ local function drawSystem(
         worstLevel == "safe"
             and "SAFE"
             or string.upper(worstLevel),
-        worstLevel
+        worstLevel,
+        SYSTEM_COLORS.system
     )
 
     Layout.labelValue(

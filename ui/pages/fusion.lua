@@ -13,10 +13,10 @@ local function tankOrEmpty(tank)
 end
 
 local function drawButton(monitor, Layout, x, y, width, text, color)
-    Layout.writeAt(monitor, x, y, string.rep(" ", width), colors.white, color)
+    Layout.writeAt(monitor, x, y, string.rep(" ", width), colors.black, color)
     text = Layout.truncate(text, width)
     local textX = x + math.max(math.floor((width - #text) / 2), 0)
-    Layout.writeAt(monitor, textX, y, text, colors.white, color)
+    Layout.writeAt(monitor, textX, y, text, colors.black, color)
 end
 
 -- Redraw the complete title strip. This prevents stale characters from
@@ -40,7 +40,7 @@ local function drawPanel(monitor, Layout, cell, title, borderColor)
             cell.x + 1,
             cell.y,
             string.rep(" ", cell.width - 2),
-            colors.white,
+            colors.black,
             borderColor
         )
 
@@ -49,7 +49,7 @@ local function drawPanel(monitor, Layout, cell, title, borderColor)
             cell.x + 2,
             cell.y,
             Layout.truncate(" " .. title .. " ", cell.width - 4),
-            colors.white,
+            colors.black,
             borderColor
         )
     end

@@ -13,10 +13,10 @@ local function tankOrEmpty(tank)
 end
 
 local function drawButton(monitor, Layout, x, y, width, text, color)
-    Layout.writeAt(monitor, x, y, string.rep(" ", width), colors.white, color)
+    Layout.writeAt(monitor, x, y, string.rep(" ", width), colors.black, color)
     text = Layout.truncate(text, width)
     local textX = x + math.max(math.floor((width - #text) / 2), 0)
-    Layout.writeAt(monitor, textX, y, text, colors.white, color)
+    Layout.writeAt(monitor, textX, y, text, colors.black, color)
 end
 
 local function drawPanel(monitor, Layout, cell, title, borderColor)
