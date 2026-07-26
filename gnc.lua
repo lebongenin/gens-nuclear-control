@@ -61,6 +61,7 @@ local files = {
 	"tools/tests/fusion_test.lua",
 	"tools/tests/induction_test.lua",
 	"tools/tests/sps_test.lua",
+	"tools/tests/ae2_test.lua",
 
     --------------------------------------------------
     -- Launcher
